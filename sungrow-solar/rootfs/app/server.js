@@ -9,6 +9,8 @@ const PORT = 3000;
 const config = {
   appkey: process.env.SUNGROW_APPKEY,
   secretKey: process.env.SUNGROW_SECRET_KEY,
+  authorizeUrl: process.env.SUNGROW_AUTHORIZE_URL,
+  redirectUrl: process.env.SUNGROW_REDIRECT_URL,
   host: process.env.SUNGROW_HOST,
   pollInterval: parseInt(process.env.SUNGROW_POLL_INTERVAL || '300', 10),
   ingressEntry: process.env.INGRESS_ENTRY || ''
@@ -40,20 +42,21 @@ app.get('/api/health', (req, res) => {
 
 // Get authentication status and URL
 app.get('/api/auth/status', (req, res) => {
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
-  const redirectUri = `${baseUrl}/api/auth/callback`;
-
+  // Use the configured authorize URL from the Sungrow portal
+  // The redirect URL in the portal should point to our callback endpoint
   res.json({
     authenticated: api.isAuthenticated(),
     authorizedPlants: api.getAuthorizedPlants(),
-    authUrl: api.isAuthenticated() ? null : api.getAuthorizationUrl(redirectUri),
-    redirectUri,
+    authUrl: api.isAuthenticated() ? null : config.authorizeUrl,
+    redirectUrl: config.redirectUrl,
   });
 });
 
 // OAuth callback
 app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
+
+  console.log('OAuth callback received:', { code: code ? 'present' : 'missing', error });
 
   if (error) {
     return res.redirect(`/?error=${encodeURIComponent(error)}`);
@@ -64,10 +67,8 @@ app.get('/api/auth/callback', async (req, res) => {
   }
 
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const redirectUri = `${baseUrl}/api/auth/callback`;
-
-    await api.exchangeCodeForToken(code, redirectUri);
+    // Use the redirect URL from config (must match what's registered in Sungrow portal)
+    await api.exchangeCodeForToken(code, config.redirectUrl);
     res.redirect('/?auth=success');
   } catch (err) {
     console.error('Token exchange failed:', err);

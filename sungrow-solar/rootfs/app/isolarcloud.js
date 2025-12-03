@@ -51,6 +51,8 @@ class ISolarCloudAPI {
     this.appkey = config.appkey;
     this.secretKey = config.secretKey;
     this.host = config.host;
+    this.authorizeUrl = config.authorizeUrl;
+    this.redirectUrl = config.redirectUrl;
     this.tokens = this.loadTokens();
   }
 
