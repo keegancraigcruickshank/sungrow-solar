@@ -183,27 +183,77 @@ class ISolarCloudAPI {
     return data.result_data;
   }
 
-  async getRealTimeData(psKeyList, deviceType = 11) {
+  async getDeviceRealTimeData(psKeyList, deviceType = 14) {
     if (!this.token) {
       await this.login();
     }
 
+    // Energy Storage System (device_type 14) measuring points
     const pointIds = [
-      '1', '2', '24', '25',
-      '13011', '13012', '13112', '13134',
-      '13141', '13142', '13143',
-      '13028', '13029', '13034', '13035',
-      '13119', '13130', '13199',
-      '13121', '13122', '13125',
-      '13147', '13148', '13149',
-      '13126', '13150',
-      '13138', '13139',
+      // Power metrics
+      '13011',  // Active Power (W)
+      '13012',  // Total Reactive Power (var)
+      '13003',  // Total DC Power (W)
+      '13119',  // Load Power (W)
+      '13121',  // Feed-in Power (W)
+      '13149',  // Purchased Power (W)
+      '13126',  // Battery Charging Power (W)
+      '13150',  // Battery Discharging Power (W)
+
+      // Energy metrics
+      '13112',  // Daily PV Yield (Wh)
+      '13134',  // Total PV Yield (Wh)
+      '13122',  // Feed-in Energy Today (Wh)
+      '13125',  // Total Feed-in Energy (Wh)
+      '13147',  // Energy Purchased Today (Wh)
+      '13148',  // Total Purchased Energy (Wh)
+      '13199',  // Daily Load Consumption (Wh)
+      '13130',  // Total Load Consumption (Wh)
+
+      // Battery metrics
+      '13141',  // Battery Level (SOC) %
+      '13142',  // Battery Health (SOH) %
+      '13143',  // Battery Temperature (°C)
+      '13138',  // Battery Voltage (V)
+      '13139',  // Battery Current (A)
+      '13028',  // Battery Charging Energy Today (Wh)
+      '13029',  // Battery Discharging Energy Today (Wh)
+      '13034',  // Total Battery Charging Energy (Wh)
+      '13035',  // Total Battery Discharging Energy (Wh)
+      '13140',  // Battery Capacity (Wh)
+
+      // Grid metrics
+      '13157',  // Phase A Voltage (V)
+      '13158',  // Phase B Voltage (V)
+      '13159',  // Phase C Voltage (V)
+      '13007',  // Grid Frequency (Hz)
+
+      // PV metrics
+      '13001',  // MPPT1 Voltage (V)
+      '13002',  // MPPT1 Current (A)
+      '13105',  // MPPT2 Voltage (V)
+      '13106',  // MPPT2 Current (A)
     ];
 
-    const data = await this.request('/openapi/getDevicePointMinuteDataList', {
+    const data = await this.request('/openapi/getDeviceRealTimeData', {
       device_type: deviceType,
       point_id_list: pointIds,
       ps_key_list: psKeyList,
+    });
+
+    return data.result_data;
+  }
+
+  // Get device list for a plant to find ps_keys
+  async getDeviceList(psId) {
+    if (!this.token) {
+      await this.login();
+    }
+
+    const data = await this.request('/openapi/getDeviceList', {
+      ps_id: psId,
+      curPage: 1,
+      size: 100,
     });
 
     return data.result_data;
