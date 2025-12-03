@@ -1,97 +1,65 @@
 const fs = require('fs');
-const path = require('path');
 
-const TOKEN_FILE = '/data/tokens.json';
+const TOKEN_FILE = '/data/token.json';
 
-// Plant measuring points we care about
-const MEASURING_POINTS = {
-  // Power
-  '83033': { name: 'Plant Power', unit: 'W' },
-  '83002': { name: 'Inverter AC Power', unit: 'W' },
-  '83067': { name: 'PV Active Power', unit: 'W' },
-  '83106': { name: 'Load Power', unit: 'W' },
-  '83549': { name: 'Grid Active Power', unit: 'W' },
-
-  // Daily yields
-  '83022': { name: 'Daily Yield', unit: 'Wh' },
-  '83009': { name: 'Inverter Daily Yield', unit: 'Wh' },
-  '83072': { name: 'Feed-in Energy Today', unit: 'Wh' },
-  '83102': { name: 'Energy Purchased Today', unit: 'Wh' },
-  '83118': { name: 'Daily Load Consumption', unit: 'Wh' },
-  '83097': { name: 'Daily Direct Consumption', unit: 'Wh' },
-
-  // Totals
-  '83024': { name: 'Total Yield', unit: 'Wh' },
-  '83004': { name: 'Inverter Total Yield', unit: 'Wh' },
-  '83075': { name: 'Feed-in Energy Total', unit: 'Wh' },
-  '83105': { name: 'Total Purchased Energy', unit: 'Wh' },
-  '83124': { name: 'Total Load Consumption', unit: 'Wh' },
-  '83100': { name: 'Total Direct Consumption', unit: 'Wh' },
-
-  // Battery
-  '83129': { name: 'Battery SOC', unit: '%' },
-  '83252': { name: 'Battery Level', unit: '%' },
-  '83232': { name: 'Total Field SOC', unit: '%' },
-  '83243': { name: 'Daily Charge', unit: 'Wh' },
-  '83244': { name: 'Daily Discharge', unit: 'Wh' },
-  '83241': { name: 'Total Charge', unit: 'Wh' },
-  '83242': { name: 'Total Discharge', unit: 'Wh' },
-  '83326': { name: 'Battery Power', unit: 'W' },
-
-  // Other
-  '83025': { name: 'Equivalent Hours', unit: 'h' },
-  '83023': { name: 'Plant PR', unit: '' },
-  '83016': { name: 'Ambient Temperature', unit: '°C' },
-  '83017': { name: 'Module Temperature', unit: '°C' },
-  '83012': { name: 'Irradiation', unit: 'W/m²' },
-};
+// Default appkey used by iSolarCloud
+const DEFAULT_APPKEY = 'B0455FBE7AA0328DB57B59AA729F05D8';
 
 class ISolarCloudAPI {
   constructor(config) {
-    this.appkey = config.appkey;
-    this.secretKey = config.secretKey;
+    this.username = config.username;
+    this.password = config.password;
     this.host = config.host;
-    this.tokens = this.loadTokens();
+    this.appkey = DEFAULT_APPKEY;
+    this.token = null;
+    this.userId = null;
+    this.loadToken();
   }
 
-  loadTokens() {
+  loadToken() {
     try {
       if (fs.existsSync(TOKEN_FILE)) {
-        const data = fs.readFileSync(TOKEN_FILE, 'utf8');
-        return JSON.parse(data);
+        const data = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
+        this.token = data.token;
+        this.userId = data.userId;
+        console.log('Loaded saved token');
       }
     } catch (err) {
-      console.error('Failed to load tokens:', err.message);
+      console.error('Failed to load token:', err.message);
     }
-    return null;
   }
 
-  saveTokens(tokens) {
+  saveToken() {
     try {
-      fs.writeFileSync(TOKEN_FILE, JSON.stringify(tokens, null, 2));
-      this.tokens = tokens;
+      fs.writeFileSync(TOKEN_FILE, JSON.stringify({
+        token: this.token,
+        userId: this.userId,
+        savedAt: new Date().toISOString()
+      }, null, 2));
     } catch (err) {
-      console.error('Failed to save tokens:', err.message);
+      console.error('Failed to save token:', err.message);
     }
   }
 
-  clearTokens() {
+  clearToken() {
+    this.token = null;
+    this.userId = null;
     try {
       if (fs.existsSync(TOKEN_FILE)) {
         fs.unlinkSync(TOKEN_FILE);
       }
-      this.tokens = null;
     } catch (err) {
-      console.error('Failed to clear tokens:', err.message);
+      console.error('Failed to clear token:', err.message);
     }
   }
 
-  async request(endpoint, body = {}, requiresAuth = true) {
+  async request(endpoint, body = {}, requiresToken = true) {
     const url = `${this.host}${endpoint}`;
 
     const headers = {
       'Content-Type': 'application/json;charset=UTF-8',
-      'x-access-key': this.secretKey,
+      'sys_code': '901',
+      'x-access-key': this.appkey,
     };
 
     const requestBody = {
@@ -100,19 +68,11 @@ class ISolarCloudAPI {
       ...body,
     };
 
-    // Add authorization header if we have a token
-    if (requiresAuth && this.tokens?.access_token) {
-      requestBody.Authorization = `Bearer ${this.tokens.access_token}`;
+    if (requiresToken && this.token) {
+      requestBody.token = this.token;
     }
 
-    console.log(`API Request: ${endpoint}`, {
-      url,
-      hasToken: !!this.tokens?.access_token,
-      hasAppkey: !!this.appkey,
-      appkeyLength: this.appkey?.length,
-      hasSecretKey: !!this.secretKey,
-    });
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
+    console.log(`API Request: ${endpoint}`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -121,187 +81,119 @@ class ISolarCloudAPI {
     });
 
     const data = await response.json();
-    console.log('Response:', JSON.stringify(data, null, 2));
+    console.log(`API Response: ${endpoint}`, data.result_code, data.result_msg);
 
-    if (data.error === 'invalid_token' || data.result_code === '401') {
-      // Token expired, try refresh
-      if (this.tokens?.refresh_token) {
-        console.log('Token expired, attempting refresh...');
-        const refreshed = await this.refreshToken();
-        if (refreshed) {
-          // Retry the request
-          return this.request(endpoint, body, requiresAuth);
-        }
+    // Check for token errors
+    if (data.result_code === 'E00003' || data.result_msg === 'er_token_login_invalid') {
+      console.log('Token invalid, attempting re-login...');
+      this.token = null;
+      const loginSuccess = await this.login();
+      if (loginSuccess) {
+        // Retry the request
+        return this.request(endpoint, body, requiresToken);
       }
-      throw new Error('Authentication required');
+      throw new Error('Authentication failed');
     }
 
-    if (data.result_code && data.result_code !== '1') {
+    if (data.result_code !== '1') {
       throw new Error(data.result_msg || `API error: ${data.result_code}`);
     }
 
     return data;
   }
 
-  async exchangeCodeForToken(code, redirectUri) {
-    const data = await this.request('/openapi/apiManage/token', {
-      grant_type: 'authorization_code',
-      code,
-      redirect_uri: redirectUri,
+  async login() {
+    if (!this.username || !this.password) {
+      throw new Error('Username and password required');
+    }
+
+    console.log(`Logging in as ${this.username}...`);
+
+    const data = await this.request('/openapi/login', {
+      user_account: this.username,
+      user_password: this.password,
     }, false);
 
-    if (data.result_code === '1' && data.result_data?.access_token) {
-      const tokens = {
-        access_token: data.result_data.access_token,
-        refresh_token: data.result_data.refresh_token,
-        expires_in: data.result_data.expires_in,
-        expires_at: Date.now() + (parseInt(data.result_data.expires_in) * 1000),
-        auth_ps_list: data.result_data.auth_ps_list,
-        auth_user: data.result_data.auth_user,
-      };
-      this.saveTokens(tokens);
-      return tokens;
+    const result = data.result_data;
+
+    if (result.login_state === '1' && result.token) {
+      this.token = result.token;
+      this.userId = result.user_id;
+      this.saveToken();
+      console.log('Login successful');
+      return true;
     }
 
-    throw new Error(data.result_msg || 'Failed to exchange code for token');
-  }
+    // Handle login errors
+    const loginErrors = {
+      '-1': 'Account does not exist',
+      '0': 'Incorrect password',
+      '2': 'Account locked due to incorrect password',
+      '5': 'Account locked by admin',
+    };
 
-  async refreshToken() {
-    if (!this.tokens?.refresh_token) {
-      return false;
-    }
-
-    try {
-      const data = await this.request('/openapi/apiManage/refreshToken', {
-        refresh_token: this.tokens.refresh_token,
-      }, false);
-
-      if (data.result_data?.code === 1 || data.result_data?.access_token) {
-        const tokens = {
-          ...this.tokens,
-          access_token: data.result_data.access_token,
-          refresh_token: data.result_data.refresh_token,
-          expires_in: data.result_data.expires_in,
-          expires_at: Date.now() + (parseInt(data.result_data.expires_in) * 1000),
-        };
-        this.saveTokens(tokens);
-        return true;
-      }
-    } catch (err) {
-      console.error('Token refresh failed:', err.message);
-    }
-
-    return false;
+    const errorMsg = loginErrors[result.login_state] || result.msg || 'Login failed';
+    throw new Error(errorMsg);
   }
 
   isAuthenticated() {
-    return !!(this.tokens?.access_token);
+    return !!this.token;
   }
 
-  getAuthorizedPlants() {
-    return this.tokens?.auth_ps_list || [];
-  }
+  async getPlantList() {
+    if (!this.token) {
+      await this.login();
+    }
 
-  async getPlantList(options = {}) {
-    const data = await this.request('/openapi/platform/queryPowerStationList', {
-      ps_type: options.psType || '1,3,4,5,6,7,8,12',
-      valid_flag: options.validFlag || '1,3',
-      page: options.page || 1,
-      size: options.size || 50,
+    const data = await this.request('/openapi/getPowerStationList', {
+      curPage: 1,
+      size: 100,
     });
 
     return data.result_data;
   }
 
-  async getRealTimeData(psIds) {
-    if (!psIds || psIds.length === 0) {
-      throw new Error('No plant IDs provided');
+  async getPlantDetail(sn) {
+    if (!this.token) {
+      await this.login();
     }
 
-    const pointIds = Object.keys(MEASURING_POINTS);
-
-    const data = await this.request('/openapi/platform/getPowerStationRealTimeData', {
-      ps_id_list: psIds.map(String),
-      point_id_list: pointIds,
-      is_get_point_dict: '1',
+    const data = await this.request('/openapi/getPowerStationDetail', {
+      sn: sn,
+      is_get_ps_remarks: '1',
     });
 
-    // Parse the response into a more usable format
-    const result = {
-      plants: [],
-      raw: data.result_data,
-    };
-
-    if (data.result_data?.device_point_list) {
-      for (const plant of data.result_data.device_point_list) {
-        const plantData = {
-          ps_id: plant.ps_id,
-          ps_name: plant.ps_name,
-          ps_key: plant.ps_key,
-          uuid: plant.uuid,
-          points: {},
-        };
-
-        // Extract point values (they come as p83022, p83024, etc.)
-        for (const [pointId, meta] of Object.entries(MEASURING_POINTS)) {
-          const key = `p${pointId}`;
-          if (plant[key] !== undefined) {
-            const rawValue = parseFloat(plant[key]);
-            plantData.points[pointId] = {
-              ...meta,
-              value: rawValue,
-              displayValue: this.formatValue(rawValue, meta.unit),
-            };
-          }
-        }
-
-        result.plants.push(plantData);
-      }
-    }
-
-    return result;
+    return data.result_data;
   }
 
-  formatValue(value, unit) {
-    if (value === null || value === undefined || isNaN(value)) {
-      return '--';
+  async getRealTimeData(psKeyList, deviceType = 11) {
+    if (!this.token) {
+      await this.login();
     }
 
-    // Convert Wh to kWh/MWh for display
-    if (unit === 'Wh') {
-      if (value >= 1000000) {
-        return `${(value / 1000000).toFixed(2)} MWh`;
-      } else if (value >= 1000) {
-        return `${(value / 1000).toFixed(2)} kWh`;
-      }
-      return `${value.toFixed(0)} Wh`;
-    }
+    // Key measuring points for different device types
+    const pointIds = [
+      // Inverter points
+      '1', '2', '24', '25',  // Yield today, total, active power, reactive power
+      // Energy storage points
+      '13011', '13012', '13112', '13134', // Active power, reactive, daily/total PV yield
+      '13141', '13142', '13143', // Battery SOC, SOH, temp
+      '13028', '13029', '13034', '13035', // Battery charge/discharge today/total
+      '13119', '13130', '13199', // Load power, total consumption, daily consumption
+      '13121', '13122', '13125', // Feed-in power, today, total
+      '13147', '13148', '13149', // Purchased today, total, power
+      '13126', '13150', // Battery charging/discharging power
+      '13138', '13139', // Battery voltage, current
+    ];
 
-    // Convert W to kW for display
-    if (unit === 'W') {
-      if (Math.abs(value) >= 1000) {
-        return `${(value / 1000).toFixed(2)} kW`;
-      }
-      return `${value.toFixed(0)} W`;
-    }
+    const data = await this.request('/openapi/getDevicePointMinuteDataList', {
+      device_type: deviceType,
+      point_id_list: pointIds,
+      ps_key_list: psKeyList,
+    });
 
-    // Percentage
-    if (unit === '%') {
-      return `${value.toFixed(1)}%`;
-    }
-
-    // Temperature
-    if (unit === '°C') {
-      return `${value.toFixed(1)}°C`;
-    }
-
-    // Hours
-    if (unit === 'h') {
-      return `${value.toFixed(1)} h`;
-    }
-
-    return `${value} ${unit}`.trim();
+    return data.result_data;
   }
 }
 
-module.exports = { ISolarCloudAPI, MEASURING_POINTS };
+module.exports = { ISolarCloudAPI };

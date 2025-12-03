@@ -1,13 +1,10 @@
 configuration:
-  appkey:
-    name: App Key
-    description: Application key from Sungrow developer portal (developer-api.isolarcloud.com)
-  secret_key:
-    name: Secret Key
-    description: Secret key from Sungrow developer portal
-  authorize_url:
-    name: Authorize URL
-    description: "Full authorize URL from Sungrow portal. First update the redirect URL in the portal to your HA callback (shown in logs), then paste the authorize URL here."
+  username:
+    name: Username
+    description: Your iSolarCloud account email or username
+  password:
+    name: Password
+    description: Your iSolarCloud account password
   host:
     name: API Region
     description: Select your iSolarCloud region

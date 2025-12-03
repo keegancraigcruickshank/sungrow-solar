@@ -19,15 +19,13 @@ panel_icon: "mdi:solar-power"
 panel_title: "Sungrow Solar"
 
 options:
-  appkey: ""
-  secret_key: ""
-  authorize_url: ""
+  username: ""
+  password: ""
   host: "https://augateway.isolarcloud.com"
   poll_interval: 300
 
 schema:
-  appkey: str
-  secret_key: password
-  authorize_url: str
+  username: str
+  password: password
   host: list(https://gateway.isolarcloud.com|https://gateway.isolarcloud.com.hk|https://gateway.isolarcloud.eu|https://augateway.isolarcloud.com)
   poll_interval: int(60,600)
