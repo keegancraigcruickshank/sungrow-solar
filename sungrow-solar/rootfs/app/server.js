@@ -8,6 +8,8 @@ const PORT = 3000;
 const config = {
   username: process.env.SUNGROW_USERNAME,
   password: process.env.SUNGROW_PASSWORD,
+  appkey: process.env.SUNGROW_APPKEY,
+  rsaPublicKey: process.env.SUNGROW_RSA_PUBLIC_KEY,
   host: process.env.SUNGROW_HOST,
   pollInterval: parseInt(process.env.SUNGROW_POLL_INTERVAL || '300', 10),
 };
@@ -28,7 +30,7 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    configured: !!(config.username && config.password),
+    configured: !!(config.username && config.password && config.appkey && config.rsaPublicKey),
     authenticated: api.isAuthenticated(),
     host: config.host,
   });
@@ -37,7 +39,7 @@ app.get('/api/health', (req, res) => {
 // Get status
 app.get('/api/status', async (req, res) => {
   res.json({
-    configured: !!(config.username && config.password),
+    configured: !!(config.username && config.password && config.appkey && config.rsaPublicKey),
     authenticated: api.isAuthenticated(),
     lastUpdate: cache.lastUpdate,
     error: cache.error,
@@ -331,5 +333,7 @@ app.listen(PORT, () => {
   console.log(`Sungrow Solar addon running on port ${PORT}`);
   console.log(`Host: ${config.host}`);
   console.log(`Username: ${config.username}`);
+  console.log(`App Key: ${config.appkey ? 'configured' : 'NOT SET'}`);
+  console.log(`RSA Key: ${config.rsaPublicKey ? 'configured' : 'NOT SET'}`);
   console.log(`Poll interval: ${config.pollInterval}s`);
 });

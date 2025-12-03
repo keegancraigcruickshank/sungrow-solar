@@ -1,16 +1,15 @@
 const fs = require('fs');
+const crypto = require('crypto');
 
 const TOKEN_FILE = '/data/token.json';
-
-// Default appkey used by iSolarCloud
-const DEFAULT_APPKEY = 'B0455FBE7AA0328DB57B59AA729F05D8';
 
 class ISolarCloudAPI {
   constructor(config) {
     this.username = config.username;
     this.password = config.password;
     this.host = config.host;
-    this.appkey = DEFAULT_APPKEY;
+    this.appkey = config.appkey;
+    this.rsaPublicKey = config.rsaPublicKey;
     this.token = null;
     this.userId = null;
     this.loadToken();
@@ -53,14 +52,54 @@ class ISolarCloudAPI {
     }
   }
 
+  // Generate a random 16-character session key
+  generateSessionKey() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let key = '';
+    for (let i = 0; i < 16; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return key;
+  }
+
+  // RSA encrypt the session key with Sungrow's public key
+  rsaEncrypt(data) {
+    if (!this.rsaPublicKey) {
+      throw new Error('RSA public key not configured');
+    }
+
+    // Format the public key properly
+    let pemKey = this.rsaPublicKey;
+    if (!pemKey.includes('-----BEGIN')) {
+      pemKey = `-----BEGIN PUBLIC KEY-----\n${pemKey}\n-----END PUBLIC KEY-----`;
+    }
+
+    const buffer = Buffer.from(data, 'utf8');
+    const encrypted = crypto.publicEncrypt(
+      {
+        key: pemKey,
+        padding: crypto.constants.RSA_PKCS1_PADDING,
+      },
+      buffer
+    );
+
+    return encrypted.toString('base64');
+  }
+
+  // AES encrypt the request body
+  aesEncrypt(data, key) {
+    const iv = Buffer.alloc(16, 0); // Zero IV as per Sungrow's implementation
+    const cipher = crypto.createCipheriv('aes-128-cbc', Buffer.from(key, 'utf8'), iv);
+    cipher.setAutoPadding(true);
+
+    let encrypted = cipher.update(data, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    return encrypted;
+  }
+
   async request(endpoint, body = {}, requiresToken = true) {
     const url = `${this.host}${endpoint}`;
-
-    const headers = {
-      'Content-Type': 'application/json;charset=UTF-8',
-      'sys_code': '901',
-      'x-access-key': this.appkey,
-    };
 
     const requestBody = {
       appkey: this.appkey,
@@ -72,15 +111,36 @@ class ISolarCloudAPI {
       requestBody.token = this.token;
     }
 
+    // Generate session key and encrypt
+    const sessionKey = this.generateSessionKey();
+    const encryptedKey = this.rsaEncrypt(sessionKey);
+    const encryptedBody = this.aesEncrypt(JSON.stringify(requestBody), sessionKey);
+
+    const headers = {
+      'Content-Type': 'application/json;charset=UTF-8',
+      'sys_code': '901',
+      'x-access-key': this.appkey,
+      'x-random-secret-key': encryptedKey,
+    };
+
     console.log(`API Request: ${endpoint}`);
 
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({ data: encryptedBody }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      console.error('Failed to parse response:', responseText.substring(0, 200));
+      throw new Error('Invalid response from API');
+    }
+
     console.log(`API Response: ${endpoint}`, data.result_code, data.result_msg);
 
     // Check for token errors
@@ -105,6 +165,14 @@ class ISolarCloudAPI {
   async login() {
     if (!this.username || !this.password) {
       throw new Error('Username and password required');
+    }
+
+    if (!this.appkey) {
+      throw new Error('App key required - get it from iSolarCloud developer portal');
+    }
+
+    if (!this.rsaPublicKey) {
+      throw new Error('RSA public key required - get it from iSolarCloud developer portal');
     }
 
     console.log(`Logging in as ${this.username}...`);

@@ -5,6 +5,12 @@ configuration:
   password:
     name: Password
     description: Your iSolarCloud account password
+  appkey:
+    name: App Key
+    description: Your iSolarCloud developer app key (from developer portal)
+  rsa_public_key:
+    name: RSA Public Key
+    description: Your iSolarCloud RSA public key (from developer portal, the long key starting with MIGf...)
   host:
     name: API Region
     description: Select your iSolarCloud region
