@@ -8,6 +8,7 @@ class ISolarCloudAPI {
     this.password = config.password;
     this.host = config.host;
     this.appkey = config.appkey;
+    this.secretKey = config.secretKey;
     this.token = null;
     this.userId = null;
     this.loadToken();
@@ -54,15 +55,12 @@ class ISolarCloudAPI {
     const url = `${this.host}${endpoint}`;
 
     // Headers as per docs section 1.3 (5)
+    // x-access-key is the secret key, appkey goes in the body
     const headers = {
       'Content-Type': 'application/json;charset=UTF-8',
       'sys_code': '901',
+      'x-access-key': this.secretKey,
     };
-
-    // Only add x-access-key if appkey is provided
-    if (this.appkey) {
-      headers['x-access-key'] = this.appkey;
-    }
 
     console.log('Headers:', JSON.stringify(headers, null, 2));
 
