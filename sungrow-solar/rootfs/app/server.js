@@ -264,31 +264,79 @@ app.get('/', (req, res) => {
     }
 
     async function loadLiveData() {
-      if (!currentPsKey) return;
+      if (!currentPlant) return;
       const live = document.getElementById('live');
-      live.innerHTML = '<div class="loading">Loading live data...</div>';
+      live.innerHTML = '<div class="loading">Loading devices...</div>';
       try {
-        const res = await fetch('api/realtime/'+currentPsKey+'?type=14');
+        // First get device list for this plant
+        const devRes = await fetch('api/devices/'+currentPlant.ps_id);
+        const devData = await devRes.json();
+        console.log('Devices:', devData);
+
+        if (devData.error) throw new Error(devData.error);
+
+        // Find energy storage device (type 14) or inverter (type 11)
+        let device = null;
+        if (devData.pageList) {
+          device = devData.pageList.find(d => d.device_type === 14) || devData.pageList.find(d => d.device_type === 11) || devData.pageList[0];
+        }
+
+        if (!device) {
+          live.innerHTML = '<div class="loading">No devices found. Raw: '+JSON.stringify(devData).substring(0,200)+'</div>';
+          return;
+        }
+
+        const psKey = device.ps_key || (currentPlant.ps_id + '_' + device.device_type + '_0_0');
+        const deviceType = device.device_type || 14;
+        console.log('Using device:', device, 'ps_key:', psKey);
+
+        live.innerHTML = '<div class="loading">Loading real-time data for '+device.device_name+'...</div>';
+
+        const res = await fetch('api/realtime/'+encodeURIComponent(psKey)+'?type='+deviceType);
         const data = await res.json();
+        console.log('Realtime data:', data);
+
         if (data.error) throw new Error(data.error);
         if (data.device_point_list && data.device_point_list.length > 0) {
           const dp = data.device_point_list[0].device_point;
-          live.innerHTML = renderLiveStats(dp);
+          live.innerHTML = renderLiveStats(dp, deviceType);
         } else {
-          live.innerHTML = '<div class="loading">No device data available</div>';
+          live.innerHTML = '<div class="loading">No real-time data. Response: '+JSON.stringify(data).substring(0,300)+'</div>';
         }
       } catch (err) {
+        console.error('Live data error:', err);
         live.innerHTML = '<div class="error-card"><h2>Error</h2><p>'+err.message+'</p></div>';
       }
     }
 
-    function renderLiveStats(dp) {
-      const soc = dp.p13141 || 0;
-      const battCharge = dp.p13126 || 0;
-      const battDischarge = dp.p13150 || 0;
-      const battPower = parseFloat(battCharge) > 0 ? battCharge : -parseFloat(battDischarge);
-      const battStatus = parseFloat(battCharge) > 0 ? 'Charging' : (parseFloat(battDischarge) > 0 ? 'Discharging' : 'Idle');
-      return '<div class="section"><div class="section-header"><div class="section-title">Power Flow</div><div class="section-meta">Updated: '+(dp.device_time||'--')+'</div></div><div class="grid"><div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div><div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div><div class="card grid-export"><h3>Feed-in Power</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div><div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+'</div></div><div class="grid"><div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+soc+'%"></div></div></div><div class="card battery"><h3>Battery Power</h3><div class="value">'+formatPower(Math.abs(battPower))+'<span class="unit">'+powerUnit(battPower)+'</span></div></div><div class="card"><h3>Voltage</h3><div class="value">'+(dp.p13138||'--')+'<span class="unit">V</span></div></div><div class="card"><h3>Temperature</h3><div class="value">'+(dp.p13143||'--')+'<span class="unit">C</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div><div class="grid"><div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div><div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div><div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div><div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div><div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div><div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div></div></div>';
+    function renderLiveStats(dp, deviceType) {
+      // Show all available data points for debugging
+      const keys = Object.keys(dp).filter(k => k.startsWith('p')).sort();
+      let html = '<div class="section"><div class="section-header"><div class="section-title">'+dp.device_name+'</div><div class="section-meta">Type: '+deviceType+' | Updated: '+(dp.device_time||'--')+'</div></div>';
+
+      if (deviceType === 14) {
+        // Energy Storage System
+        const soc = dp.p13141 || 0;
+        const battCharge = dp.p13126 || 0;
+        const battDischarge = dp.p13150 || 0;
+        const battPower = parseFloat(battCharge) > 0 ? battCharge : -parseFloat(battDischarge);
+        const battStatus = parseFloat(battCharge) > 0 ? 'Charging' : (parseFloat(battDischarge) > 0 ? 'Discharging' : 'Idle');
+        html += '<div class="grid"><div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div><div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div><div class="card grid-export"><h3>Feed-in Power</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div><div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+'</div></div><div class="grid"><div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+soc+'%"></div></div></div><div class="card battery"><h3>Battery Power</h3><div class="value">'+formatPower(Math.abs(battPower))+'<span class="unit">'+powerUnit(battPower)+'</span></div></div><div class="card"><h3>Voltage</h3><div class="value">'+(dp.p13138||'--')+'<span class="unit">V</span></div></div><div class="card"><h3>Temperature</h3><div class="value">'+(dp.p13143||'--')+'<span class="unit">C</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div><div class="grid"><div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div><div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div><div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div><div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div><div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div><div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div></div>';
+      } else if (deviceType === 11) {
+        // Inverter
+        html += '<div class="grid"><div class="card solar"><h3>Active Power</h3><div class="value">'+formatPower(dp.p24)+'<span class="unit">'+powerUnit(dp.p24)+'</span></div></div><div class="card"><h3>Yield Today</h3><div class="value">'+formatEnergy(dp.p1)+'<span class="unit">'+energyUnit(dp.p1)+'</span></div></div><div class="card"><h3>Total Yield</h3><div class="value">'+formatEnergy(dp.p2)+'<span class="unit">'+energyUnit(dp.p2)+'</span></div></div><div class="card"><h3>DC Power</h3><div class="value">'+formatPower(dp.p14)+'<span class="unit">'+powerUnit(dp.p14)+'</span></div></div></div>';
+      } else {
+        // Unknown type - show raw data
+        html += '<div class="grid">';
+        keys.slice(0,12).forEach(k => {
+          html += '<div class="card"><h3>'+k+'</h3><div class="value">'+dp[k]+'</div></div>';
+        });
+        html += '</div>';
+      }
+
+      // Debug: show available point IDs
+      html += '</div><div class="section"><div class="section-header"><div class="section-title">Available Data Points</div></div><div style="font-size:0.75rem;color:#64748b;word-break:break-all">'+keys.join(', ')+'</div></div>';
+      return html;
     }
 
     loadData();
