@@ -1,0 +1,16 @@
+configuration:
+  username:
+    name: iSolarCloud Username
+    description: Your iSolarCloud account email or username
+  password:
+    name: iSolarCloud Password
+    description: Your iSolarCloud account password
+  appkey:
+    name: API App Key
+    description: API application key from Sungrow developer portal (developer-api.isolarcloud.com)
+  host:
+    name: API Host
+    description: Regional API endpoint URL (e.g., https://augateway.isolarcloud.com for Australia)
+  poll_interval:
+    name: Poll Interval
+    description: How often to fetch data from iSolarCloud (in seconds, 30-300)
