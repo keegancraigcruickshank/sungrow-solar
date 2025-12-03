@@ -73,10 +73,13 @@ class ISolarCloudAPI {
     const keyData = this.rsaPublicKey.replace(/\s/g, '');
     console.log('Using RSA public key (first 50 chars):', keyData.substring(0, 50) + '...');
 
-    // Decode the base64 key and create forge public key
-    const keyDer = forge.util.decode64(keyData);
-    const keyAsn1 = forge.asn1.fromDer(keyDer);
-    const publicKey = forge.pki.publicKeyFromAsn1(keyAsn1);
+    // Build PEM format
+    const pemKey = '-----BEGIN PUBLIC KEY-----\n' +
+      keyData.match(/.{1,64}/g).join('\n') +
+      '\n-----END PUBLIC KEY-----';
+
+    // Parse using forge's PEM parser
+    const publicKey = forge.pki.publicKeyFromPem(pemKey);
 
     // Encrypt with PKCS#1 v1.5 padding
     const encrypted = publicKey.encrypt(data, 'RSAES-PKCS1-V1_5');
