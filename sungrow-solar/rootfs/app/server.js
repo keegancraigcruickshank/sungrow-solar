@@ -316,12 +316,16 @@ app.get('/', (req, res) => {
 
       if (deviceType === 14) {
         // Energy Storage System
-        const soc = dp.p13141 || 0;
-        const battCharge = dp.p13126 || 0;
-        const battDischarge = dp.p13150 || 0;
-        const battPower = parseFloat(battCharge) > 0 ? battCharge : -parseFloat(battDischarge);
-        const battStatus = parseFloat(battCharge) > 0 ? 'Charging' : (parseFloat(battDischarge) > 0 ? 'Discharging' : 'Idle');
-        html += '<div class="grid"><div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div><div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div><div class="card grid-export"><h3>Feed-in Power</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div><div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+'</div></div><div class="grid"><div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+soc+'%"></div></div></div><div class="card battery"><h3>Battery Power</h3><div class="value">'+formatPower(Math.abs(battPower))+'<span class="unit">'+powerUnit(battPower)+'</span></div></div><div class="card"><h3>Voltage</h3><div class="value">'+(dp.p13138||'--')+'<span class="unit">V</span></div></div><div class="card"><h3>Temperature</h3><div class="value">'+(dp.p13143||'--')+'<span class="unit">C</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div><div class="grid"><div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div><div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div><div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div><div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div><div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div><div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div></div>';
+        const socRaw = parseFloat(dp.p13141) || 0;
+        const soc = socRaw < 1 ? (socRaw * 100).toFixed(1) : socRaw.toFixed(1);
+        const socPercent = socRaw < 1 ? socRaw * 100 : socRaw;
+        const sohRaw = parseFloat(dp.p13142) || 0;
+        const soh = sohRaw < 1 ? (sohRaw * 100).toFixed(1) : sohRaw.toFixed(1);
+        const battCharge = parseFloat(dp.p13126) || 0;
+        const battDischarge = parseFloat(dp.p13150) || 0;
+        const battPower = battCharge > 0 ? battCharge : battDischarge;
+        const battStatus = battCharge > 0 ? 'Charging' : (battDischarge > 0 ? 'Discharging' : 'Idle');
+        html += '<div class="grid"><div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div><div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div><div class="card grid-export"><h3>Feed-in Power</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div><div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+' | Health: '+soh+'%</div></div><div class="grid"><div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+socPercent+'%"></div></div></div><div class="card battery"><h3>Battery Power</h3><div class="value">'+formatPower(battPower)+'<span class="unit">'+powerUnit(battPower)+'</span></div></div><div class="card"><h3>Voltage</h3><div class="value">'+(parseFloat(dp.p13138)||'--')+'<span class="unit">V</span></div></div><div class="card"><h3>Temperature</h3><div class="value">'+(parseFloat(dp.p13143)||'--')+'<span class="unit">C</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div><div class="grid"><div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div><div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div><div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div><div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div><div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div><div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div></div>';
       } else if (deviceType === 11) {
         // Inverter
         html += '<div class="grid"><div class="card solar"><h3>Active Power</h3><div class="value">'+formatPower(dp.p24)+'<span class="unit">'+powerUnit(dp.p24)+'</span></div></div><div class="card"><h3>Yield Today</h3><div class="value">'+formatEnergy(dp.p1)+'<span class="unit">'+energyUnit(dp.p1)+'</span></div></div><div class="card"><h3>Total Yield</h3><div class="value">'+formatEnergy(dp.p2)+'<span class="unit">'+energyUnit(dp.p2)+'</span></div></div><div class="card"><h3>DC Power</h3><div class="value">'+formatPower(dp.p14)+'<span class="unit">'+powerUnit(dp.p14)+'</span></div></div></div>';
@@ -334,13 +338,13 @@ app.get('/', (req, res) => {
         html += '</div>';
       }
 
-      // Debug: show available point IDs
-      html += '</div><div class="section"><div class="section-header"><div class="section-title">Available Data Points</div></div><div style="font-size:0.75rem;color:#64748b;word-break:break-all">'+keys.join(', ')+'</div></div>';
+      html += '</div>';
       return html;
     }
 
     loadData();
-    setInterval(() => { loadData(); if(document.getElementById('live').style.display!=='none') loadLiveData(); }, pollInterval);
+    // Poll every 60 seconds for live data
+    setInterval(() => { loadData(); if(document.getElementById('live').style.display!=='none') loadLiveData(); }, 60000);
   </script>
 </body>
 </html>`);
