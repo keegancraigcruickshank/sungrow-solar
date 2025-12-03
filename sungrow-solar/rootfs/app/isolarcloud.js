@@ -1,5 +1,6 @@
 const fs = require('fs');
 const crypto = require('crypto');
+const forge = require('node-forge');
 
 const TOKEN_FILE = '/data/token.json';
 
@@ -68,22 +69,20 @@ class ISolarCloudAPI {
       throw new Error('RSA public key not configured');
     }
 
-    // Format the public key properly
-    let pemKey = this.rsaPublicKey;
-    if (!pemKey.includes('-----BEGIN')) {
-      pemKey = `-----BEGIN PUBLIC KEY-----\n${pemKey}\n-----END PUBLIC KEY-----`;
-    }
+    // Remove any whitespace from the key
+    const keyData = this.rsaPublicKey.replace(/\s/g, '');
+    console.log('Using RSA public key (first 50 chars):', keyData.substring(0, 50) + '...');
 
-    const buffer = Buffer.from(data, 'utf8');
-    const encrypted = crypto.publicEncrypt(
-      {
-        key: pemKey,
-        padding: crypto.constants.RSA_PKCS1_PADDING,
-      },
-      buffer
-    );
+    // Decode the base64 key and create forge public key
+    const keyDer = forge.util.decode64(keyData);
+    const keyAsn1 = forge.asn1.fromDer(keyDer);
+    const publicKey = forge.pki.publicKeyFromAsn1(keyAsn1);
 
-    return encrypted.toString('base64');
+    // Encrypt with PKCS#1 v1.5 padding
+    const encrypted = publicKey.encrypt(data, 'RSAES-PKCS1-V1_5');
+
+    // Return as base64
+    return forge.util.encode64(encrypted);
   }
 
   // AES encrypt the request body
