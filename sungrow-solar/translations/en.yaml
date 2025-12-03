@@ -5,9 +5,9 @@ configuration:
   secret_key:
     name: Secret Key
     description: Secret key from Sungrow developer portal
-  external_url:
-    name: External URL
-    description: "Your HA external base URL for this addon (e.g., https://ha.example.com/api/hassio_ingress/abc123). Get this by opening the addon externally and copying the URL."
+  authorize_url:
+    name: Authorize URL
+    description: "Full authorize URL from Sungrow portal. First update the redirect URL in the portal to your HA callback (shown in logs), then paste the authorize URL here."
   host:
     name: API Region
     description: Select your iSolarCloud region

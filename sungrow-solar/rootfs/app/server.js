@@ -9,11 +9,21 @@ const PORT = 3000;
 const config = {
   appkey: process.env.SUNGROW_APPKEY,
   secretKey: process.env.SUNGROW_SECRET_KEY,
-  externalUrl: (process.env.SUNGROW_EXTERNAL_URL || '').replace(/\/$/, ''), // Remove trailing slash
+  authorizeUrl: process.env.SUNGROW_AUTHORIZE_URL || '',
   host: process.env.SUNGROW_HOST,
   pollInterval: parseInt(process.env.SUNGROW_POLL_INTERVAL || '300', 10),
   ingressEntry: process.env.INGRESS_ENTRY || ''
 };
+
+// Extract redirect URL from authorize URL (it's embedded as a parameter)
+function getRedirectUrl() {
+  if (!config.authorizeUrl) return null;
+  const match = config.authorizeUrl.match(/redirectUrl=([^&]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+  return null;
+}
 
 // Initialize API client
 const api = new ISolarCloudAPI(config);
@@ -41,22 +51,23 @@ app.get('/api/health', (req, res) => {
 
 // Get authentication status and URL
 app.get('/api/auth/status', (req, res) => {
-  const callbackUrl = `${config.externalUrl}/api/auth/callback`;
+  const redirectUrl = getRedirectUrl();
 
   res.json({
     authenticated: api.isAuthenticated(),
     authorizedPlants: api.getAuthorizedPlants(),
-    callbackUrl: callbackUrl,
-    configured: !!(config.externalUrl && config.appkey && config.secretKey),
+    authorizeUrl: config.authorizeUrl,
+    redirectUrl: redirectUrl,
+    configured: !!(config.authorizeUrl && config.appkey && config.secretKey),
   });
 });
 
 // OAuth callback
 app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
-  const callbackUrl = `${config.externalUrl}/api/auth/callback`;
+  const redirectUrl = getRedirectUrl();
 
-  console.log('OAuth callback received:', { code: code ? 'present' : 'missing', error });
+  console.log('OAuth callback received:', { code: code ? 'present' : 'missing', error, redirectUrl });
 
   if (error) {
     return res.redirect(`/?error=${encodeURIComponent(error)}`);
@@ -67,7 +78,7 @@ app.get('/api/auth/callback', async (req, res) => {
   }
 
   try {
-    await api.exchangeCodeForToken(code, callbackUrl);
+    await api.exchangeCodeForToken(code, redirectUrl);
     res.redirect('/?auth=success');
   } catch (err) {
     console.error('Token exchange failed:', err);
@@ -299,12 +310,15 @@ app.get('/', (req, res) => {
     <div id="authSection" class="auth-card hidden">
       <h2>Authentication Required</h2>
       <p>Connect your iSolarCloud account to view your solar system data.</p>
-      <div class="callback-url">
-        <strong>Callback URL (register this in iSolarCloud developer portal):</strong>
-        <span id="callbackUrl">Loading...</span>
+      <div id="setupInfo" class="callback-url">
+        <strong>Current Redirect URL (from your authorize_url config):</strong>
+        <span id="redirectUrl">Not configured</span>
+        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <strong>Required Callback URL (update in Sungrow portal if different):</strong>
+          <span id="requiredCallback">Loading...</span>
+        </div>
       </div>
-      <p style="font-size: 0.875rem; margin-bottom: 16px;">After registering the callback URL above, use the authorize URL from the portal to connect.</p>
-      <a id="authLink" href="#" class="btn btn-primary" target="_blank">Open iSolarCloud Authorization</a>
+      <a id="authLink" href="#" class="btn btn-primary" target="_blank">Connect to iSolarCloud</a>
     </div>
 
     <div id="loadingSection" class="loading">
@@ -475,9 +489,21 @@ app.get('/', (req, res) => {
 
       if (!status.authenticated) {
         document.getElementById('authSection').classList.remove('hidden');
-        document.getElementById('callbackUrl').textContent = status.callbackUrl || 'Configure external_url in addon settings';
-        // Remove the auth link href - user needs to use the authorize URL from the Sungrow portal
-        document.getElementById('authLink').href = 'https://developer-api.isolarcloud.com';
+
+        // Show current redirect URL from config
+        document.getElementById('redirectUrl').textContent = status.redirectUrl || 'Not configured - add authorize_url to addon config';
+
+        // Show required callback (current page URL + /api/auth/callback)
+        const currentBase = window.location.href.replace(/\/$/, '').split('?')[0];
+        document.getElementById('requiredCallback').textContent = currentBase + '/api/auth/callback';
+
+        // Set authorize URL
+        if (status.authorizeUrl) {
+          document.getElementById('authLink').href = status.authorizeUrl;
+        } else {
+          document.getElementById('authLink').href = 'https://developer-api.isolarcloud.com';
+          document.getElementById('authLink').textContent = 'Configure authorize_url first';
+        }
         return;
       }
 
