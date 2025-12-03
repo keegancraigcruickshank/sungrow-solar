@@ -115,7 +115,14 @@ class ISolarCloudAPI {
       requestBody.Authorization = `Bearer ${this.tokens.access_token}`;
     }
 
-    console.log(`API Request: ${endpoint}`, { url, hasToken: !!this.tokens?.access_token });
+    console.log(`API Request: ${endpoint}`, {
+      url,
+      hasToken: !!this.tokens?.access_token,
+      hasAppkey: !!this.appkey,
+      appkeyLength: this.appkey?.length,
+      hasSecretKey: !!this.secretKey,
+    });
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(url, {
       method: 'POST',
@@ -124,6 +131,7 @@ class ISolarCloudAPI {
     });
 
     const data = await response.json();
+    console.log('Response:', JSON.stringify(data, null, 2));
 
     if (data.error === 'invalid_token' || data.result_code === '401') {
       // Token expired, try refresh

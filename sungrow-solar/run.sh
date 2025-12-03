@@ -12,6 +12,8 @@ export INGRESS_ENTRY=$(bashio::addon.ingress_entry)
 bashio::log.info "Starting Sungrow Solar addon..."
 bashio::log.info "API Host: ${SUNGROW_HOST}"
 bashio::log.info "Poll Interval: ${SUNGROW_POLL_INTERVAL}s"
+bashio::log.info "AppKey length: ${#SUNGROW_APPKEY}"
+bashio::log.info "SecretKey length: ${#SUNGROW_SECRET_KEY}"
 
 cd /app
 exec node server.js
