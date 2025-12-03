@@ -1,6 +1,4 @@
 const fs = require('fs');
-const crypto = require('crypto');
-const forge = require('node-forge');
 
 const TOKEN_FILE = '/data/token.json';
 
@@ -10,7 +8,6 @@ class ISolarCloudAPI {
     this.password = config.password;
     this.host = config.host;
     this.appkey = config.appkey;
-    this.rsaPublicKey = config.rsaPublicKey;
     this.token = null;
     this.userId = null;
     this.loadToken();
@@ -53,62 +50,17 @@ class ISolarCloudAPI {
     }
   }
 
-  // Generate a random 16-character session key
-  generateSessionKey() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let key = '';
-    for (let i = 0; i < 16; i++) {
-      key += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return key;
-  }
-
-  // RSA encrypt the session key with Sungrow's public key
-  rsaEncrypt(data) {
-    if (!this.rsaPublicKey) {
-      throw new Error('RSA public key not configured');
-    }
-
-    // Remove any whitespace from the key
-    const keyData = this.rsaPublicKey.replace(/\s/g, '');
-    console.log('Using RSA public key (first 50 chars):', keyData.substring(0, 50) + '...');
-    console.log('Key length:', keyData.length);
-
-    // Decode base64 to binary string
-    const keyBytes = forge.util.decode64(keyData);
-
-    // Create a buffer for forge
-    const buffer = forge.util.createBuffer(keyBytes, 'raw');
-
-    // Parse ASN.1 from the DER-encoded buffer
-    const asn1 = forge.asn1.fromDer(buffer);
-
-    // Convert to public key
-    const publicKey = forge.pki.publicKeyFromAsn1(asn1);
-    console.log('Successfully parsed RSA public key');
-
-    // Encrypt with PKCS#1 v1.5 padding
-    const encrypted = publicKey.encrypt(data, 'RSAES-PKCS1-V1_5');
-
-    // Return as base64
-    return forge.util.encode64(encrypted);
-  }
-
-  // AES encrypt the request body
-  aesEncrypt(data, key) {
-    const iv = Buffer.alloc(16, 0); // Zero IV as per Sungrow's implementation
-    const cipher = crypto.createCipheriv('aes-128-cbc', Buffer.from(key, 'utf8'), iv);
-    cipher.setAutoPadding(true);
-
-    let encrypted = cipher.update(data, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
-
-    return encrypted;
-  }
-
   async request(endpoint, body = {}, requiresToken = true) {
     const url = `${this.host}${endpoint}`;
 
+    // Headers as per docs section 1.3 (5)
+    const headers = {
+      'Content-Type': 'application/json;charset=UTF-8',
+      'sys_code': '901',
+      'x-access-key': this.appkey,
+    };
+
+    // Request body as per docs section 1.3 (6)
     const requestBody = {
       appkey: this.appkey,
       lang: '_en_US',
@@ -119,29 +71,19 @@ class ISolarCloudAPI {
       requestBody.token = this.token;
     }
 
-    // Generate session key and encrypt
-    const sessionKey = this.generateSessionKey();
-    const encryptedKey = this.rsaEncrypt(sessionKey);
-    const encryptedBody = this.aesEncrypt(JSON.stringify(requestBody), sessionKey);
-
-    const headers = {
-      'Content-Type': 'application/json;charset=UTF-8',
-      'sys_code': '901',
-      'x-access-key': this.appkey,
-      'x-random-secret-key': encryptedKey,
-    };
-
     console.log(`API Request: ${endpoint}`);
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ data: encryptedBody }),
+      body: JSON.stringify(requestBody),
     });
 
     const responseText = await response.text();
-    let data;
+    console.log('Raw response:', responseText.substring(0, 500));
 
+    let data;
     try {
       data = JSON.parse(responseText);
     } catch (e) {
@@ -157,7 +99,6 @@ class ISolarCloudAPI {
       this.token = null;
       const loginSuccess = await this.login();
       if (loginSuccess) {
-        // Retry the request
         return this.request(endpoint, body, requiresToken);
       }
       throw new Error('Authentication failed');
@@ -177,10 +118,6 @@ class ISolarCloudAPI {
 
     if (!this.appkey) {
       throw new Error('App key required - get it from iSolarCloud developer portal');
-    }
-
-    if (!this.rsaPublicKey) {
-      throw new Error('RSA public key required - get it from iSolarCloud developer portal');
     }
 
     console.log(`Logging in as ${this.username}...`);
@@ -247,19 +184,16 @@ class ISolarCloudAPI {
       await this.login();
     }
 
-    // Key measuring points for different device types
     const pointIds = [
-      // Inverter points
-      '1', '2', '24', '25',  // Yield today, total, active power, reactive power
-      // Energy storage points
-      '13011', '13012', '13112', '13134', // Active power, reactive, daily/total PV yield
-      '13141', '13142', '13143', // Battery SOC, SOH, temp
-      '13028', '13029', '13034', '13035', // Battery charge/discharge today/total
-      '13119', '13130', '13199', // Load power, total consumption, daily consumption
-      '13121', '13122', '13125', // Feed-in power, today, total
-      '13147', '13148', '13149', // Purchased today, total, power
-      '13126', '13150', // Battery charging/discharging power
-      '13138', '13139', // Battery voltage, current
+      '1', '2', '24', '25',
+      '13011', '13012', '13112', '13134',
+      '13141', '13142', '13143',
+      '13028', '13029', '13034', '13035',
+      '13119', '13130', '13199',
+      '13121', '13122', '13125',
+      '13147', '13148', '13149',
+      '13126', '13150',
+      '13138', '13139',
     ];
 
     const data = await this.request('/openapi/getDevicePointMinuteDataList', {
