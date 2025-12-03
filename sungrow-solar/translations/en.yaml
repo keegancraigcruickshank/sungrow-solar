@@ -5,12 +5,9 @@ configuration:
   secret_key:
     name: Secret Key
     description: Secret key from Sungrow developer portal
-  authorize_url:
-    name: Authorize URL
-    description: The full authorize URL from the developer portal (starts with https://auweb3.isolarcloud.com/...)
-  redirect_url:
-    name: Redirect URL
-    description: Your redirect URL registered in the developer portal (must match exactly)
+  external_url:
+    name: External URL
+    description: "Your HA external base URL for this addon (e.g., https://ha.example.com/api/hassio_ingress/abc123). Get this by opening the addon externally and copying the URL."
   host:
     name: API Region
     description: Select your iSolarCloud region

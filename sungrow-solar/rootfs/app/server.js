@@ -9,8 +9,7 @@ const PORT = 3000;
 const config = {
   appkey: process.env.SUNGROW_APPKEY,
   secretKey: process.env.SUNGROW_SECRET_KEY,
-  authorizeUrl: process.env.SUNGROW_AUTHORIZE_URL,
-  redirectUrl: process.env.SUNGROW_REDIRECT_URL,
+  externalUrl: (process.env.SUNGROW_EXTERNAL_URL || '').replace(/\/$/, ''), // Remove trailing slash
   host: process.env.SUNGROW_HOST,
   pollInterval: parseInt(process.env.SUNGROW_POLL_INTERVAL || '300', 10),
   ingressEntry: process.env.INGRESS_ENTRY || ''
@@ -42,19 +41,20 @@ app.get('/api/health', (req, res) => {
 
 // Get authentication status and URL
 app.get('/api/auth/status', (req, res) => {
-  // Use the configured authorize URL from the Sungrow portal
-  // The redirect URL in the portal should point to our callback endpoint
+  const callbackUrl = `${config.externalUrl}/api/auth/callback`;
+
   res.json({
     authenticated: api.isAuthenticated(),
     authorizedPlants: api.getAuthorizedPlants(),
-    authUrl: api.isAuthenticated() ? null : config.authorizeUrl,
-    redirectUrl: config.redirectUrl,
+    callbackUrl: callbackUrl,
+    configured: !!(config.externalUrl && config.appkey && config.secretKey),
   });
 });
 
 // OAuth callback
 app.get('/api/auth/callback', async (req, res) => {
   const { code, error } = req.query;
+  const callbackUrl = `${config.externalUrl}/api/auth/callback`;
 
   console.log('OAuth callback received:', { code: code ? 'present' : 'missing', error });
 
@@ -67,8 +67,7 @@ app.get('/api/auth/callback', async (req, res) => {
   }
 
   try {
-    // Use the redirect URL from config (must match what's registered in Sungrow portal)
-    await api.exchangeCodeForToken(code, config.redirectUrl);
+    await api.exchangeCodeForToken(code, callbackUrl);
     res.redirect('/?auth=success');
   } catch (err) {
     console.error('Token exchange failed:', err);
@@ -170,6 +169,19 @@ app.get('/', (req, res) => {
     }
     .auth-card h2 { color: #fbbf24; margin-bottom: 12px; }
     .auth-card p { margin-bottom: 16px; color: #94a3b8; }
+    .callback-url {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 16px 0;
+      font-family: monospace;
+      font-size: 0.85rem;
+      word-break: break-all;
+      text-align: left;
+      color: #94a3b8;
+    }
+    .callback-url strong { color: #f8fafc; display: block; margin-bottom: 8px; font-family: sans-serif; }
     .btn {
       display: inline-block;
       padding: 12px 24px;
@@ -287,7 +299,12 @@ app.get('/', (req, res) => {
     <div id="authSection" class="auth-card hidden">
       <h2>Authentication Required</h2>
       <p>Connect your iSolarCloud account to view your solar system data.</p>
-      <a id="authLink" href="#" class="btn btn-primary">Connect to iSolarCloud</a>
+      <div class="callback-url">
+        <strong>Callback URL (register this in iSolarCloud developer portal):</strong>
+        <span id="callbackUrl">Loading...</span>
+      </div>
+      <p style="font-size: 0.875rem; margin-bottom: 16px;">After registering the callback URL above, use the authorize URL from the portal to connect.</p>
+      <a id="authLink" href="#" class="btn btn-primary" target="_blank">Open iSolarCloud Authorization</a>
     </div>
 
     <div id="loadingSection" class="loading">
@@ -458,7 +475,9 @@ app.get('/', (req, res) => {
 
       if (!status.authenticated) {
         document.getElementById('authSection').classList.remove('hidden');
-        document.getElementById('authLink').href = status.authUrl;
+        document.getElementById('callbackUrl').textContent = status.callbackUrl || 'Configure external_url in addon settings';
+        // Remove the auth link href - user needs to use the authorize URL from the Sungrow portal
+        document.getElementById('authLink').href = 'https://developer-api.isolarcloud.com';
         return;
       }
 

@@ -51,8 +51,7 @@ class ISolarCloudAPI {
     this.appkey = config.appkey;
     this.secretKey = config.secretKey;
     this.host = config.host;
-    this.authorizeUrl = config.authorizeUrl;
-    this.redirectUrl = config.redirectUrl;
+    this.externalUrl = config.externalUrl;
     this.tokens = this.loadTokens();
   }
 
@@ -86,16 +85,6 @@ class ISolarCloudAPI {
     } catch (err) {
       console.error('Failed to clear tokens:', err.message);
     }
-  }
-
-  getAuthorizationUrl(redirectUri) {
-    // Build OAuth authorization URL
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.appkey,
-      redirect_uri: redirectUri,
-    });
-    return `${this.host}/openapi/oauth/authorize?${params.toString()}`;
   }
 
   async request(endpoint, body = {}, requiresAuth = true) {
