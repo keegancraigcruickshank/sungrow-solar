@@ -57,8 +57,14 @@ class ISolarCloudAPI {
     const headers = {
       'Content-Type': 'application/json;charset=UTF-8',
       'sys_code': '901',
-      'x-access-key': this.appkey,
     };
+
+    // Only add x-access-key if appkey is provided
+    if (this.appkey) {
+      headers['x-access-key'] = this.appkey;
+    }
+
+    console.log('Headers:', JSON.stringify(headers, null, 2));
 
     // Request body as per docs section 1.3 (6)
     const requestBody = {
