@@ -1,9 +1,8 @@
 #!/usr/bin/with-contenv bashio
 
 # Export configuration as environment variables
-export SUNGROW_USERNAME=$(bashio::config 'username')
-export SUNGROW_PASSWORD=$(bashio::config 'password')
 export SUNGROW_APPKEY=$(bashio::config 'appkey')
+export SUNGROW_ACCESS_KEY=$(bashio::config 'access_key')
 export SUNGROW_HOST=$(bashio::config 'host')
 export SUNGROW_POLL_INTERVAL=$(bashio::config 'poll_interval')
 
