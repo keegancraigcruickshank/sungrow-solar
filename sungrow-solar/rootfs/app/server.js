@@ -138,12 +138,14 @@ app.get('/', (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sungrow Solar</title>
   <style>
+    :root{--bg-primary:#0f172a;--bg-secondary:#1e293b;--bg-card:rgba(255,255,255,0.05);--bg-card-hover:rgba(255,255,255,0.08);--border-color:rgba(255,255,255,0.1);--text-primary:#f8fafc;--text-secondary:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b}
+    @media(prefers-color-scheme:light){:root{--bg-primary:#f8fafc;--bg-secondary:#f1f5f9;--bg-card:rgba(0,0,0,0.03);--bg-card-hover:rgba(0,0,0,0.06);--border-color:rgba(0,0,0,0.1);--text-primary:#0f172a;--text-secondary:#1e293b;--text-muted:#64748b;--text-dim:#94a3b8}}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#e2e8f0;min-height:100vh;padding:20px}
+    body{font-family:var(--ha-card-font-family,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif);background:var(--ha-card-background,var(--bg-primary));color:var(--primary-text-color,var(--text-secondary));min-height:100vh;padding:20px}
     .container{max-width:1400px;margin:0 auto}
-    h1{text-align:center;margin-bottom:24px;font-size:1.75rem;color:#f8fafc}
-    h2{font-size:1rem;color:#94a3b8;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}
-    .status-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:24px;font-size:0.875rem;flex-wrap:wrap;gap:12px}
+    h1{text-align:center;margin-bottom:24px;font-size:1.75rem;color:var(--primary-text-color,var(--text-primary))}
+    h2{font-size:1rem;color:var(--secondary-text-color,var(--text-muted));margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}
+    .status-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--ha-card-background,var(--bg-card));border:1px solid var(--divider-color,var(--border-color));border-radius:8px;margin-bottom:24px;font-size:0.875rem;flex-wrap:wrap;gap:12px}
     .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
     .status-dot.ok{background:#22c55e}
     .status-dot.error{background:#ef4444}
@@ -152,29 +154,30 @@ app.get('/', (req, res) => {
     .error-card{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:24px;margin-bottom:24px;text-align:center}
     .error-card h2{color:#f87171;margin-bottom:12px}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-    .card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px}
-    .card h3{font-size:0.7rem;color:#94a3b8;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
-    .card .value{font-size:1.4rem;font-weight:700;color:#f8fafc}
-    .card .unit{font-size:0.8rem;color:#64748b;margin-left:4px}
-    .card.solar{border-color:rgba(250,204,21,0.3);background:rgba(250,204,21,0.05)}
-    .card.solar .value{color:#facc15}
-    .card.battery{border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.05)}
-    .card.battery .value{color:#22c55e}
-    .card.grid-import{border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05)}
-    .card.grid-import .value{color:#ef4444}
-    .card.grid-export{border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.05)}
-    .card.grid-export .value{color:#3b82f6}
-    .card.load{border-color:rgba(168,85,247,0.3);background:rgba(168,85,247,0.05)}
-    .card.load .value{color:#a855f7}
-    .section{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:20px;margin-bottom:20px}
-    .section-header{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center}
-    .section-title{font-size:1.125rem;font-weight:600}
-    .section-meta{color:#64748b;font-size:0.75rem}
-    .loading{text-align:center;padding:60px;color:#64748b}
+    .card{background:var(--ha-card-background,var(--bg-card));border:1px solid var(--divider-color,var(--border-color));border-radius:12px;padding:16px}
+    .card h3{font-size:0.7rem;color:var(--secondary-text-color,var(--text-muted));margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+    .card .value{font-size:1.4rem;font-weight:700;color:var(--primary-text-color,var(--text-primary))}
+    .card .unit{font-size:0.8rem;color:var(--secondary-text-color,var(--text-dim));margin-left:4px}
+    .card.solar{border-color:rgba(250,204,21,0.4);background:rgba(250,204,21,0.1)}
+    .card.solar .value{color:#ca8a04}
+    .card.battery{border-color:rgba(34,197,94,0.4);background:rgba(34,197,94,0.1)}
+    .card.battery .value{color:#16a34a}
+    .card.grid-import{border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.1)}
+    .card.grid-import .value{color:#dc2626}
+    .card.grid-export{border-color:rgba(59,130,246,0.4);background:rgba(59,130,246,0.1)}
+    .card.grid-export .value{color:#2563eb}
+    .card.load{border-color:rgba(168,85,247,0.4);background:rgba(168,85,247,0.1)}
+    .card.load .value{color:#9333ea}
+    .section{background:var(--ha-card-background,var(--bg-card));border:1px solid var(--divider-color,var(--border-color));border-radius:16px;padding:20px;margin-bottom:20px}
+    .section-header{margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--divider-color,var(--border-color));display:flex;justify-content:space-between;align-items:center}
+    .section-title{font-size:1.125rem;font-weight:600;color:var(--primary-text-color,var(--text-primary))}
+    .section-meta{color:var(--secondary-text-color,var(--text-dim));font-size:0.75rem}
+    .loading{text-align:center;padding:60px;color:var(--secondary-text-color,var(--text-dim))}
     .tabs{display:flex;gap:8px;margin-bottom:20px}
-    .tab{padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:#94a3b8;cursor:pointer;font-size:0.875rem}
-    .tab.active{background:rgba(59,130,246,0.2);border-color:rgba(59,130,246,0.5);color:#3b82f6}
-    .battery-bar{height:24px;background:rgba(0,0,0,0.3);border-radius:12px;overflow:hidden;margin-top:8px}
+    .tab{padding:8px 16px;border-radius:8px;border:1px solid var(--divider-color,var(--border-color));background:transparent;color:var(--secondary-text-color,var(--text-muted));cursor:pointer;font-size:0.875rem}
+    .tab:hover{background:var(--bg-card-hover)}
+    .tab.active{background:var(--primary-color,rgba(59,130,246,0.2));border-color:var(--primary-color,rgba(59,130,246,0.5));color:var(--primary-color,#3b82f6)}
+    .battery-bar{height:24px;background:var(--divider-color,rgba(0,0,0,0.2));border-radius:12px;overflow:hidden;margin-top:8px}
     .battery-fill{height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:12px;transition:width 0.5s}
   </style>
 </head>
@@ -310,9 +313,13 @@ app.get('/', (req, res) => {
     }
 
     function renderLiveStats(dp, deviceType) {
-      // Show all available data points for debugging
-      const keys = Object.keys(dp).filter(k => k.startsWith('p')).sort();
-      let html = '<div class="section"><div class="section-header"><div class="section-title">'+dp.device_name+'</div><div class="section-meta">Type: '+deviceType+' | Updated: '+(dp.device_time||'--')+'</div></div>';
+      // Format device time (comes as YYYYMMDDHHmmss)
+      let timeStr = '--';
+      if (dp.device_time && dp.device_time.length === 14) {
+        const t = dp.device_time;
+        timeStr = t.slice(8,10)+':'+t.slice(10,12)+':'+t.slice(12,14);
+      }
+      let html = '<div class="section"><div class="section-header"><div class="section-title">Power Flow</div><div class="section-meta">'+dp.device_name+' | '+timeStr+'</div></div>';
 
       if (deviceType === 14) {
         // Energy Storage System
@@ -325,7 +332,34 @@ app.get('/', (req, res) => {
         const battDischarge = parseFloat(dp.p13150) || 0;
         const battPower = battCharge > 0 ? battCharge : battDischarge;
         const battStatus = battCharge > 0 ? 'Charging' : (battDischarge > 0 ? 'Discharging' : 'Idle');
-        html += '<div class="grid"><div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div><div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div><div class="card grid-export"><h3>Feed-in Power</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div><div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+' | Health: '+soh+'%</div></div><div class="grid"><div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+socPercent+'%"></div></div></div><div class="card battery"><h3>Battery Power</h3><div class="value">'+formatPower(battPower)+'<span class="unit">'+powerUnit(battPower)+'</span></div></div><div class="card"><h3>Voltage</h3><div class="value">'+(parseFloat(dp.p13138)||'--')+'<span class="unit">V</span></div></div><div class="card"><h3>Temperature</h3><div class="value">'+(parseFloat(dp.p13143)||'--')+'<span class="unit">C</span></div></div></div></div><div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div><div class="grid"><div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div><div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div><div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div><div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div><div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div><div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div></div>';
+
+        // Power Flow section
+        html += '<div class="grid">';
+        html += '<div class="card solar"><h3>Solar Power</h3><div class="value">'+formatPower(dp.p13003)+'<span class="unit">'+powerUnit(dp.p13003)+'</span></div></div>';
+        html += '<div class="card load"><h3>Load Power</h3><div class="value">'+formatPower(dp.p13119)+'<span class="unit">'+powerUnit(dp.p13119)+'</span></div></div>';
+        html += '<div class="card grid-export"><h3>Feed-in</h3><div class="value">'+formatPower(dp.p13121)+'<span class="unit">'+powerUnit(dp.p13121)+'</span></div></div>';
+        html += '<div class="card grid-import"><h3>Grid Import</h3><div class="value">'+formatPower(dp.p13149)+'<span class="unit">'+powerUnit(dp.p13149)+'</span></div></div>';
+        html += '</div></div>';
+
+        // Battery section
+        html += '<div class="section"><div class="section-header"><div class="section-title">Battery</div><div class="section-meta">'+battStatus+' | Health: '+soh+'%</div></div>';
+        html += '<div class="grid">';
+        html += '<div class="card battery"><h3>State of Charge</h3><div class="value">'+soc+'<span class="unit">%</span></div><div class="battery-bar"><div class="battery-fill" style="width:'+socPercent+'%"></div></div></div>';
+        html += '<div class="card battery"><h3>Power</h3><div class="value">'+formatPower(battPower)+'<span class="unit">'+powerUnit(battPower)+'</span></div></div>';
+        html += '<div class="card"><h3>Voltage</h3><div class="value">'+(parseFloat(dp.p13138)||'--')+'<span class="unit">V</span></div></div>';
+        html += '<div class="card"><h3>Temperature</h3><div class="value">'+(parseFloat(dp.p13143)||'--')+'<span class="unit">°C</span></div></div>';
+        html += '</div></div>';
+
+        // Energy Today section
+        html += '<div class="section"><div class="section-header"><div class="section-title">Energy Today</div></div>';
+        html += '<div class="grid">';
+        html += '<div class="card solar"><h3>PV Yield</h3><div class="value">'+formatEnergy(dp.p13112)+'<span class="unit">'+energyUnit(dp.p13112)+'</span></div></div>';
+        html += '<div class="card load"><h3>Consumption</h3><div class="value">'+formatEnergy(dp.p13199)+'<span class="unit">'+energyUnit(dp.p13199)+'</span></div></div>';
+        html += '<div class="card grid-export"><h3>Exported</h3><div class="value">'+formatEnergy(dp.p13122)+'<span class="unit">'+energyUnit(dp.p13122)+'</span></div></div>';
+        html += '<div class="card grid-import"><h3>Imported</h3><div class="value">'+formatEnergy(dp.p13147)+'<span class="unit">'+energyUnit(dp.p13147)+'</span></div></div>';
+        html += '<div class="card battery"><h3>Batt Charged</h3><div class="value">'+formatEnergy(dp.p13028)+'<span class="unit">'+energyUnit(dp.p13028)+'</span></div></div>';
+        html += '<div class="card battery"><h3>Batt Discharged</h3><div class="value">'+formatEnergy(dp.p13029)+'<span class="unit">'+energyUnit(dp.p13029)+'</span></div></div>';
+        html += '</div></div>';
       } else if (deviceType === 11) {
         // Inverter
         html += '<div class="grid"><div class="card solar"><h3>Active Power</h3><div class="value">'+formatPower(dp.p24)+'<span class="unit">'+powerUnit(dp.p24)+'</span></div></div><div class="card"><h3>Yield Today</h3><div class="value">'+formatEnergy(dp.p1)+'<span class="unit">'+energyUnit(dp.p1)+'</span></div></div><div class="card"><h3>Total Yield</h3><div class="value">'+formatEnergy(dp.p2)+'<span class="unit">'+energyUnit(dp.p2)+'</span></div></div><div class="card"><h3>DC Power</h3><div class="value">'+formatPower(dp.p14)+'<span class="unit">'+powerUnit(dp.p14)+'</span></div></div></div>';
@@ -335,10 +369,8 @@ app.get('/', (req, res) => {
         keys.slice(0,12).forEach(k => {
           html += '<div class="card"><h3>'+k+'</h3><div class="value">'+dp[k]+'</div></div>';
         });
-        html += '</div>';
+        html += '</div></div>';
       }
-
-      html += '</div>';
       return html;
     }
 
