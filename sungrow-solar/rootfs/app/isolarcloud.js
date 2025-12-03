@@ -49,7 +49,7 @@ const MEASURING_POINTS = {
 class ISolarCloudAPI {
   constructor(config) {
     this.appkey = config.appkey;
-    this.accessKey = config.accessKey;
+    this.secretKey = config.secretKey;
     this.host = config.host;
     this.tokens = this.loadTokens();
   }
@@ -101,7 +101,7 @@ class ISolarCloudAPI {
 
     const headers = {
       'Content-Type': 'application/json;charset=UTF-8',
-      'x-access-key': this.accessKey,
+      'x-access-key': this.secretKey,
     };
 
     const requestBody = {
@@ -115,7 +115,7 @@ class ISolarCloudAPI {
       requestBody.Authorization = `Bearer ${this.tokens.access_token}`;
     }
 
-    console.log(`API Request: ${endpoint}`);
+    console.log(`API Request: ${endpoint}`, { url, hasToken: !!this.tokens?.access_token });
 
     const response = await fetch(url, {
       method: 'POST',

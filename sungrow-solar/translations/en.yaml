@@ -2,9 +2,9 @@ configuration:
   appkey:
     name: App Key
     description: Application key from Sungrow developer portal (developer-api.isolarcloud.com)
-  access_key:
-    name: Access Key
-    description: x-access-key from Sungrow developer portal
+  secret_key:
+    name: Secret Key
+    description: Secret key from Sungrow developer portal
   host:
     name: API Region
     description: Select your iSolarCloud region

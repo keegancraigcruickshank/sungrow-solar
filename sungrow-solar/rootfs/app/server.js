@@ -8,7 +8,7 @@ const PORT = 3000;
 // Configuration from environment (set by run.sh from HA options)
 const config = {
   appkey: process.env.SUNGROW_APPKEY,
-  accessKey: process.env.SUNGROW_ACCESS_KEY,
+  secretKey: process.env.SUNGROW_SECRET_KEY,
   host: process.env.SUNGROW_HOST,
   pollInterval: parseInt(process.env.SUNGROW_POLL_INTERVAL || '300', 10),
   ingressEntry: process.env.INGRESS_ENTRY || ''
@@ -32,7 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    configured: !!(config.appkey && config.accessKey),
+    configured: !!(config.appkey && config.secretKey),
     authenticated: api.isAuthenticated(),
     host: config.host,
   });
@@ -478,8 +478,8 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(\`Sungrow Solar addon running on port \${PORT}\`);
-  console.log(\`Ingress entry: \${config.ingressEntry}\`);
-  console.log(\`Configured: \${!!(config.appkey && config.accessKey)}\`);
-  console.log(\`Authenticated: \${api.isAuthenticated()}\`);
+  console.log(`Sungrow Solar addon running on port ${PORT}`);
+  console.log(`Ingress entry: ${config.ingressEntry}`);
+  console.log(`Configured: ${!!(config.appkey && config.secretKey)}`);
+  console.log(`Authenticated: ${api.isAuthenticated()}`);
 });

@@ -2,7 +2,7 @@
 
 # Export configuration as environment variables
 export SUNGROW_APPKEY=$(bashio::config 'appkey')
-export SUNGROW_ACCESS_KEY=$(bashio::config 'access_key')
+export SUNGROW_SECRET_KEY=$(bashio::config 'secret_key')
 export SUNGROW_HOST=$(bashio::config 'host')
 export SUNGROW_POLL_INTERVAL=$(bashio::config 'poll_interval')
 

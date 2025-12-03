@@ -20,12 +20,12 @@ panel_title: "Sungrow Solar"
 
 options:
   appkey: ""
-  access_key: ""
+  secret_key: ""
   host: "https://augateway.isolarcloud.com"
   poll_interval: 300
 
 schema:
   appkey: str
-  access_key: str
+  secret_key: password
   host: list(https://gateway.isolarcloud.com|https://gateway.isolarcloud.com.hk|https://gateway.isolarcloud.eu|https://augateway.isolarcloud.com)
   poll_interval: int(60,600)
