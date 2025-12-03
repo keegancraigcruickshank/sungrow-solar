@@ -179,6 +179,29 @@ app.get('/', (req, res) => {
     .tab.active{background:var(--primary-color,rgba(59,130,246,0.2));border-color:var(--primary-color,rgba(59,130,246,0.5));color:var(--primary-color,#3b82f6)}
     .battery-bar{height:24px;background:var(--divider-color,rgba(0,0,0,0.2));border-radius:12px;overflow:hidden;margin-top:8px}
     .battery-fill{height:100%;background:linear-gradient(90deg,#22c55e,#4ade80);border-radius:12px;transition:width 0.5s}
+    .flow-container{position:relative;width:100%;max-width:500px;margin:0 auto;aspect-ratio:1}
+    .flow-svg{width:100%;height:100%}
+    .flow-node{fill:var(--ha-card-background,var(--bg-card));stroke:var(--divider-color,var(--border-color));stroke-width:2}
+    .flow-node-solar{stroke:rgba(250,204,21,0.6)}
+    .flow-node-home{stroke:rgba(168,85,247,0.6)}
+    .flow-node-battery{stroke:rgba(34,197,94,0.6)}
+    .flow-node-grid{stroke:rgba(59,130,246,0.6)}
+    .flow-icon{font-size:28px;text-anchor:middle;dominant-baseline:middle;fill:var(--primary-text-color,var(--text-primary))}
+    .flow-label{font-size:11px;text-anchor:middle;fill:var(--secondary-text-color,var(--text-muted))}
+    .flow-value{font-size:14px;font-weight:700;text-anchor:middle;fill:var(--primary-text-color,var(--text-primary))}
+    .flow-line{fill:none;stroke:var(--divider-color,rgba(128,128,128,0.3));stroke-width:3;stroke-linecap:round}
+    .flow-line-active{stroke-width:4}
+    .flow-line-solar{stroke:rgba(250,204,21,0.8)}
+    .flow-line-battery{stroke:rgba(34,197,94,0.8)}
+    .flow-line-grid-import{stroke:rgba(239,68,68,0.8)}
+    .flow-line-grid-export{stroke:rgba(59,130,246,0.8)}
+    .flow-dot{fill:#fff;filter:drop-shadow(0 0 3px currentColor)}
+    .flow-dot-solar{fill:#facc15}
+    .flow-dot-battery{fill:#22c55e}
+    .flow-dot-grid-import{fill:#ef4444}
+    .flow-dot-grid-export{fill:#3b82f6}
+    @keyframes flowMove{0%{offset-distance:0%}100%{offset-distance:100%}}
+    .flow-animated{animation:flowMove 1.5s linear infinite}
   </style>
 </head>
 <body>
@@ -190,9 +213,11 @@ app.get('/', (req, res) => {
     </div>
     <div class="tabs">
       <button class="tab active" onclick="showTab('overview')">Overview</button>
+      <button class="tab" onclick="showTab('flow')">Flow</button>
       <button class="tab" onclick="showTab('live')">Live Stats</button>
     </div>
     <div id="overview" class="tab-content"></div>
+    <div id="flow" class="tab-content" style="display:none"></div>
     <div id="live" class="tab-content" style="display:none"></div>
   </div>
   <script>
@@ -205,7 +230,8 @@ app.get('/', (req, res) => {
       document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
       document.querySelector('.tab[onclick*="'+name+'"]').classList.add('active');
       document.getElementById(name).style.display = 'block';
-      if (name === 'live' && currentPsKey) loadLiveData();
+      if (name === 'live' && currentPlant) loadLiveData();
+      if (name === 'flow' && currentPlant) loadFlowData();
     }
 
     function formatPower(w) {
@@ -374,9 +400,120 @@ app.get('/', (req, res) => {
       return html;
     }
 
+    let flowData = null;
+
+    async function loadFlowData() {
+      if (!currentPlant) return;
+      const flow = document.getElementById('flow');
+      if (!flowData) flow.innerHTML = '<div class="loading">Loading flow data...</div>';
+      try {
+        const devRes = await fetch('api/devices/'+currentPlant.ps_id);
+        const devData = await devRes.json();
+        if (devData.error) throw new Error(devData.error);
+        let device = null;
+        if (devData.pageList) {
+          device = devData.pageList.find(d => d.device_type === 14) || devData.pageList.find(d => d.device_type === 11) || devData.pageList[0];
+        }
+        if (!device) { flow.innerHTML = '<div class="loading">No devices found</div>'; return; }
+        const psKey = device.ps_key || (currentPlant.ps_id + '_' + device.device_type + '_0_0');
+        const deviceType = device.device_type || 14;
+        const res = await fetch('api/realtime/'+encodeURIComponent(psKey)+'?type='+deviceType);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        if (data.device_point_list && data.device_point_list.length > 0) {
+          flowData = data.device_point_list[0].device_point;
+          flow.innerHTML = renderFlow(flowData);
+        } else {
+          flow.innerHTML = '<div class="loading">No flow data available</div>';
+        }
+      } catch (err) {
+        flow.innerHTML = '<div class="error-card"><h2>Error</h2><p>'+err.message+'</p></div>';
+      }
+    }
+
+    function renderFlow(dp) {
+      const solarPower = parseFloat(dp.p13003) || 0;
+      const loadPower = parseFloat(dp.p13119) || 0;
+      const gridExport = parseFloat(dp.p13121) || 0;
+      const gridImport = parseFloat(dp.p13149) || 0;
+      const battCharge = parseFloat(dp.p13126) || 0;
+      const battDischarge = parseFloat(dp.p13150) || 0;
+      const socRaw = parseFloat(dp.p13141) || 0;
+      const soc = socRaw < 1 ? (socRaw * 100).toFixed(0) : socRaw.toFixed(0);
+
+      // Node positions (center at 250,250 in 500x500 viewBox)
+      const solar = {x: 250, y: 80};
+      const home = {x: 250, y: 250};
+      const battery = {x: 100, y: 400};
+      const grid = {x: 400, y: 400};
+
+      // Determine active flows
+      const solarToHome = solarPower > 0 && loadPower > 0;
+      const solarToBattery = solarPower > 0 && battCharge > 0;
+      const solarToGrid = solarPower > 0 && gridExport > 0;
+      const batteryToHome = battDischarge > 0 && loadPower > 0;
+      const gridToHome = gridImport > 0 && loadPower > 0;
+      const gridToBattery = gridImport > 0 && battCharge > 0;
+
+      function flowLine(id, from, to, active, colorClass, reverse) {
+        const pathId = 'path-'+id;
+        const d = 'M'+from.x+','+from.y+' L'+to.x+','+to.y;
+        const dRev = 'M'+to.x+','+to.y+' L'+from.x+','+from.y;
+        const lineClass = active ? 'flow-line flow-line-active '+colorClass : 'flow-line';
+        let html = '<path id="'+pathId+'" d="'+(reverse?dRev:d)+'" class="'+lineClass+'"/>';
+        if (active) {
+          for (let i = 0; i < 3; i++) {
+            html += '<circle r="5" class="flow-dot '+colorClass.replace('flow-line-','flow-dot-')+'"><animateMotion dur="1.5s" repeatCount="indefinite" begin="'+(i*0.5)+'s"><mpath href="#'+pathId+'"/></animateMotion></circle>';
+          }
+        }
+        return html;
+      }
+
+      function node(pos, icon, label, value, unit, colorClass) {
+        return '<g transform="translate('+pos.x+','+pos.y+')">'+
+          '<circle r="45" class="flow-node '+colorClass+'"/>'+
+          '<text y="-8" class="flow-icon">'+icon+'</text>'+
+          '<text y="18" class="flow-value">'+value+'<tspan class="flow-label"> '+unit+'</tspan></text>'+
+          '<text y="70" class="flow-label">'+label+'</text>'+
+          '</g>';
+      }
+
+      let svg = '<div class="flow-container"><svg class="flow-svg" viewBox="0 0 500 500">';
+
+      // Draw lines first (behind nodes)
+      svg += flowLine('solar-home', solar, home, solarToHome, 'flow-line-solar', false);
+      svg += flowLine('solar-battery', solar, battery, solarToBattery, 'flow-line-solar', false);
+      svg += flowLine('solar-grid', solar, grid, solarToGrid, 'flow-line-solar', false);
+      svg += flowLine('battery-home', battery, home, batteryToHome, 'flow-line-battery', false);
+      svg += flowLine('grid-home', grid, home, gridToHome, 'flow-line-grid-import', false);
+      svg += flowLine('grid-battery', grid, battery, gridToBattery, 'flow-line-grid-import', false);
+
+      // Draw nodes
+      svg += node(solar, '☀️', 'Solar', formatPower(solarPower), powerUnit(solarPower), 'flow-node-solar');
+      svg += node(home, '🏠', 'Home', formatPower(loadPower), powerUnit(loadPower), 'flow-node-home');
+      svg += node(battery, '🔋', 'Battery '+soc+'%', formatPower(battCharge||battDischarge), powerUnit(battCharge||battDischarge), 'flow-node-battery');
+      svg += node(grid, '⚡', 'Grid', formatPower(gridImport||gridExport), powerUnit(gridImport||gridExport), 'flow-node-grid');
+
+      svg += '</svg></div>';
+
+      // Add summary cards below
+      svg += '<div class="grid" style="margin-top:20px">';
+      svg += '<div class="card solar"><h3>Solar</h3><div class="value">'+formatPower(solarPower)+'<span class="unit">'+powerUnit(solarPower)+'</span></div></div>';
+      svg += '<div class="card load"><h3>Home</h3><div class="value">'+formatPower(loadPower)+'<span class="unit">'+powerUnit(loadPower)+'</span></div></div>';
+      svg += '<div class="card battery"><h3>Battery</h3><div class="value">'+(battCharge>0?'+':battDischarge>0?'-':'')+formatPower(battCharge||battDischarge)+'<span class="unit">'+powerUnit(battCharge||battDischarge)+'</span></div></div>';
+      svg += '<div class="card '+(gridImport>0?'grid-import':'grid-export')+'"><h3>Grid</h3><div class="value">'+(gridImport>0?'+':gridExport>0?'-':'')+formatPower(gridImport||gridExport)+'<span class="unit">'+powerUnit(gridImport||gridExport)+'</span></div></div>';
+      svg += '</div>';
+
+      return svg;
+    }
+
     loadData();
     // Poll every 60 seconds for live data
-    setInterval(() => { loadData(); if(document.getElementById('live').style.display!=='none') loadLiveData(); }, 60000);
+    setInterval(() => {
+      loadData();
+      if(document.getElementById('live').style.display!=='none') loadLiveData();
+      if(document.getElementById('flow').style.display!=='none') loadFlowData();
+    }, 60000);
   </script>
 </body>
 </html>`);
