@@ -23,7 +23,7 @@ options:
   appkey: ""
   secret_key: ""
   host: "https://augateway.isolarcloud.com"
-  poll_interval: 300
+  poll_interval: 60
 
 schema:
   username: str

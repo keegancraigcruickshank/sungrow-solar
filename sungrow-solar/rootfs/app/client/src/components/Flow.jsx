@@ -306,11 +306,13 @@ function FlowDiagram({ dp }) {
                 />
                 {/* Animated dots - count and speed based on power */}
                 {Array.from({ length: flow.dots }, (_, i) => (
-                  <circle key={i} r="5" fill={flow.color}>
+                  <circle key={i} r="5" fill={flow.color} opacity="0">
                     <animateMotion
                       dur={`${flow.duration}s`}
                       repeatCount="indefinite"
                       begin={`${i * (flow.duration / flow.dots)}s`}
+                      calcMode="linear"
+                      fill="freeze"
                     >
                       <mpath href={`#path-${flow.id}`} />
                     </animateMotion>

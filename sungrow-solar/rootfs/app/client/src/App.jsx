@@ -7,9 +7,8 @@ import PlantSelect from './components/PlantSelect';
 const REFRESH_INTERVAL = 60;
 
 export default function App() {
-  const [status, setStatus] = useState('loading');
   const [initialLoad, setInitialLoad] = useState(true);
-  const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
+  const [status, setStatus] = useState('ok');
   const [plants, setPlants] = useState([]);
   const [currentPlant, setCurrentPlant] = useState(null);
   const [error, setError] = useState(null);
@@ -17,21 +16,15 @@ export default function App() {
   useEffect(() => {
     loadData();
     const dataInterval = setInterval(loadData, REFRESH_INTERVAL * 1000);
-    const tickInterval = setInterval(() => {
-      setCountdown((c) => (c > 0 ? c - 1 : REFRESH_INTERVAL));
-    }, 1000);
     return () => {
       clearInterval(dataInterval);
-      clearInterval(tickInterval);
     };
   }, []);
 
   async function loadData() {
-    setStatus('loading');
     try {
       const data = await fetchPlants();
       setStatus('ok');
-      setCountdown(REFRESH_INTERVAL);
       setError(null);
 
       if (data.pageList && data.pageList.length > 0) {
@@ -90,7 +83,7 @@ export default function App() {
           currentPlant={currentPlant}
           onChange={handlePlantChange}
         />
-        <StatusBar status={status} countdown={countdown} />
+        <StatusBar status={status} />
       </div>
       {error ? (
         <div className="error-card">
