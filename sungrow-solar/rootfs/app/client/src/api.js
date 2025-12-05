@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = './api';
 
 export async function fetchPlants() {
   const res = await fetch(`${API_BASE}/plants`);
