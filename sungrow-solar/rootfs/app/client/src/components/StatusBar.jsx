@@ -1,8 +1,9 @@
 import React from 'react';
 
-export default function StatusBar({ status, lastUpdate }) {
-  const dotClass = status === 'loading' ? 'loading' : status === 'error' ? 'error' : 'ok';
-  const statusText = status === 'loading' ? 'Updating...' : status === 'error' ? 'Error' : 'Connected';
+export default function StatusBar({ status, countdown }) {
+  const dotClass = status === 'error' ? 'error' : 'ok';
+  const statusText = status === 'error' ? 'Error' : 'Connected';
+  const countdownStr = String(countdown).padStart(2, '0');
 
   return (
     <div className="status-bar">
@@ -10,7 +11,11 @@ export default function StatusBar({ status, lastUpdate }) {
         <span className={`status-dot ${dotClass}`}></span>
         <span>{statusText}</span>
       </div>
-      <div>Last updated: {lastUpdate || '--'}</div>
+      {status === 'loading' ? (
+        <span className="spinner"></span>
+      ) : (
+        <span className="refresh-text">Refresh in {countdownStr}s</span>
+      )}
     </div>
   );
 }
