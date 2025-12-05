@@ -1,0 +1,389 @@
+:root {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-card-hover: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --text-primary: #f8fafc;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #f1f5f9;
+    --bg-card: rgba(0, 0, 0, 0.03);
+    --bg-card-hover: rgba(0, 0, 0, 0.06);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--ha-card-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  background: var(--ha-card-background, var(--bg-primary));
+  color: var(--primary-text-color, var(--text-secondary));
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 1.75rem;
+  color: var(--primary-text-color, var(--text-primary));
+}
+
+h2 {
+  font-size: 1rem;
+  color: var(--secondary-text-color, var(--text-muted));
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--ha-card-background, var(--bg-card));
+  border: 1px solid var(--divider-color, var(--border-color));
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-dot.ok {
+  background: #22c55e;
+}
+
+.status-dot.error {
+  background: #ef4444;
+}
+
+.status-dot.loading {
+  background: #fbbf24;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Error card */
+.error-card {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.error-card h2 {
+  color: #f87171;
+  margin-bottom: 12px;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* Cards */
+.card {
+  background: var(--ha-card-background, var(--bg-card));
+  border: 1px solid var(--divider-color, var(--border-color));
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card h3 {
+  font-size: 0.7rem;
+  color: var(--secondary-text-color, var(--text-muted));
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.card .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary-text-color, var(--text-primary));
+}
+
+.card .unit {
+  font-size: 0.8rem;
+  color: var(--secondary-text-color, var(--text-dim));
+  margin-left: 4px;
+}
+
+/* Card variants */
+.card.solar {
+  border-color: rgba(250, 204, 21, 0.4);
+  background: rgba(250, 204, 21, 0.1);
+}
+
+.card.solar .value {
+  color: #ca8a04;
+}
+
+.card.battery {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.card.battery .value {
+  color: #16a34a;
+}
+
+.card.grid-import {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.card.grid-import .value {
+  color: #dc2626;
+}
+
+.card.grid-export {
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.card.grid-export .value {
+  color: #2563eb;
+}
+
+.card.load {
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.card.load .value {
+  color: #9333ea;
+}
+
+/* Sections */
+.section {
+  background: var(--ha-card-background, var(--bg-card));
+  border: 1px solid var(--divider-color, var(--border-color));
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.section-header {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--divider-color, var(--border-color));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--primary-text-color, var(--text-primary));
+}
+
+.section-meta {
+  color: var(--secondary-text-color, var(--text-dim));
+  font-size: 0.75rem;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 60px;
+  color: var(--secondary-text-color, var(--text-dim));
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--divider-color, var(--border-color));
+  background: transparent;
+  color: var(--secondary-text-color, var(--text-muted));
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.tab:hover {
+  background: var(--bg-card-hover);
+}
+
+.tab.active {
+  background: var(--primary-color, rgba(59, 130, 246, 0.2));
+  border-color: var(--primary-color, rgba(59, 130, 246, 0.5));
+  color: var(--primary-color, #3b82f6);
+}
+
+/* Battery bar */
+.battery-bar {
+  height: 24px;
+  background: var(--divider-color, rgba(0, 0, 0, 0.2));
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.battery-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+  border-radius: 12px;
+  transition: width 0.5s;
+}
+
+/* Flow visualization */
+.flow-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  aspect-ratio: 1;
+}
+
+.flow-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.flow-node {
+  fill: var(--ha-card-background, var(--bg-card));
+  stroke: var(--divider-color, var(--border-color));
+  stroke-width: 2;
+}
+
+.flow-node-solar {
+  stroke: rgba(250, 204, 21, 0.6);
+}
+
+.flow-node-home {
+  stroke: rgba(168, 85, 247, 0.6);
+}
+
+.flow-node-battery {
+  stroke: rgba(34, 197, 94, 0.6);
+}
+
+.flow-node-grid {
+  stroke: rgba(59, 130, 246, 0.6);
+}
+
+.flow-icon {
+  font-size: 28px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: var(--primary-text-color, var(--text-primary));
+}
+
+.flow-label {
+  font-size: 11px;
+  text-anchor: middle;
+  fill: var(--secondary-text-color, var(--text-muted));
+}
+
+.flow-value {
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--primary-text-color, var(--text-primary));
+}
+
+.flow-line {
+  fill: none;
+  stroke: var(--divider-color, rgba(128, 128, 128, 0.3));
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.flow-line-active {
+  stroke-width: 4;
+}
+
+.flow-line-solar {
+  stroke: rgba(250, 204, 21, 0.8);
+}
+
+.flow-line-battery {
+  stroke: rgba(34, 197, 94, 0.8);
+}
+
+.flow-line-grid-import {
+  stroke: rgba(239, 68, 68, 0.8);
+}
+
+.flow-line-grid-export {
+  stroke: rgba(59, 130, 246, 0.8);
+}
+
+.flow-dot {
+  fill: #fff;
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+.flow-dot-solar {
+  fill: #facc15;
+}
+
+.flow-dot-battery {
+  fill: #22c55e;
+}
+
+.flow-dot-grid-import {
+  fill: #ef4444;
+}
+
+.flow-dot-grid-export {
+  fill: #3b82f6;
+}
+
+@keyframes flowMove {
+  0% { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+
+.flow-animated {
+  animation: flowMove 1.5s linear infinite;
+}
