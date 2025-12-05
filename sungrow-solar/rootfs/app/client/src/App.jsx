@@ -53,15 +53,11 @@ export default function App() {
           })
         );
 
-        // TODO: Remove mock plant
-        const mockPlant = { ...plantsWithDevices[0], ps_id: 'mock-123', ps_name: 'Beach House Solar', hasBattery: false };
-        const allPlants = [...plantsWithDevices, mockPlant];
-
-        setPlants(allPlants);
+        setPlants(plantsWithDevices);
         setCurrentPlant((prev) => {
-          if (!prev) return allPlants[0];
-          const stillExists = allPlants.find((p) => String(p.ps_id) === String(prev.ps_id));
-          return stillExists || allPlants[0];
+          if (!prev) return plantsWithDevices[0];
+          const stillExists = plantsWithDevices.find((p) => String(p.ps_id) === String(prev.ps_id));
+          return stillExists || plantsWithDevices[0];
         });
       }
       setInitialLoad(false);
