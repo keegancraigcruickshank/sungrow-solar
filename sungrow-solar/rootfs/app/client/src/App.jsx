@@ -98,7 +98,7 @@ export default function App() {
           <p>{error}</p>
         </div>
       ) : (
-        <Flow plant={currentPlant} />
+        <Flow plant={currentPlant} plantData={currentPlant} />
       )}
     </div>
   );

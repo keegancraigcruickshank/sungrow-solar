@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Sun, Home as HomeIcon, BatteryFull, Zap } from 'lucide-react';
+import { Sun, Home as HomeIcon, BatteryFull, Zap, Activity, Thermometer, Gauge, Cable, CircuitBoard, DollarSign } from 'lucide-react';
 import { fetchDevices, fetchRealtimeData } from '../api';
-import { formatPower, powerUnit } from '../utils';
+import { formatPower, powerUnit, formatEnergy } from '../utils';
 
-export default function Flow({ plant }) {
+export default function Flow({ plant, plantData }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [flowData, setFlowData] = useState(null);
@@ -70,7 +70,17 @@ export default function Flow({ plant }) {
     return <div className="loading">No flow data</div>;
   }
 
-  return <FlowDiagram dp={flowData} />;
+  return (
+    <>
+      <div className="flow-overview-row">
+        <OverviewCards plantData={plantData} dp={flowData} />
+        <div className="flow-card">
+          <FlowDiagram dp={flowData} />
+        </div>
+      </div>
+      <StatCards dp={flowData} />
+    </>
+  );
 }
 
 function FlowDiagram({ dp }) {
@@ -434,5 +444,264 @@ function FlowNode({ x, y, icon: Icon, label, status, value, unit, color, active,
         </text>
       </g>
     </g>
+  );
+}
+
+function OverviewCards({ plantData, dp }) {
+  // Get income data from plant
+  const todayIncome = plantData?.today_income;
+  const totalIncome = plantData?.total_income;
+
+  // Get energy data from device points
+  const getValue = (key) => {
+    const val = parseFloat(dp?.[key]);
+    return isNaN(val) ? null : val;
+  };
+
+  const gridExportToday = getValue('p13122');
+  const gridImportToday = getValue('p13147');
+
+  // Format currency value
+  const formatCurrency = (data) => {
+    if (!data || !data.value) return { value: '--', unit: '' };
+    const val = parseFloat(data.value);
+    if (isNaN(val)) return { value: '--', unit: '' };
+    return { value: val.toFixed(2), unit: data.unit || '' };
+  };
+
+  const todayIncomeFormatted = formatCurrency(todayIncome);
+  const totalIncomeFormatted = formatCurrency(totalIncome);
+
+  return (
+    <div className="overview-cards">
+      <div className="overview-grid">
+        <StatCard
+          label="Grid Import Today"
+          value={gridImportToday}
+          unit="Wh"
+          icon={Zap}
+          color="#ef4444"
+          format="energy"
+          highlight
+        />
+        <StatCard
+          label="Grid Export Today"
+          value={gridExportToday}
+          unit="Wh"
+          icon={Zap}
+          color="#3b82f6"
+          format="energy"
+          highlight
+        />
+        <StatCard
+          label="Income Today"
+          value={parseFloat(todayIncome?.value)}
+          unit={todayIncome?.unit || ''}
+          icon={DollarSign}
+          color="#22c55e"
+          format="currency"
+          highlight
+        />
+        <StatCard
+          label="Total Income"
+          value={parseFloat(totalIncome?.value)}
+          unit={totalIncome?.unit || ''}
+          icon={DollarSign}
+          color="#eab308"
+          format="currency"
+          highlight
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatCards({ dp }) {
+  // Parse all values
+  const getValue = (key) => {
+    const val = parseFloat(dp[key]);
+    return isNaN(val) ? null : val;
+  };
+
+  // Power metrics
+  const activePower = getValue('p13011');
+  const reactivePower = getValue('p13012');
+  const dcPower = getValue('p13003');
+  const loadPower = getValue('p13119');
+  const gridExport = getValue('p13121');
+  const gridImport = getValue('p13149');
+  const battCharge = getValue('p13126');
+  const battDischarge = getValue('p13150');
+
+  // Energy metrics - daily
+  const pvYieldToday = getValue('p13112');
+  const gridExportToday = getValue('p13122');
+  const gridImportToday = getValue('p13147');
+  const loadToday = getValue('p13199');
+  const battChargeToday = getValue('p13028');
+  const battDischargeToday = getValue('p13029');
+
+  // Energy metrics - total
+  const pvYieldTotal = getValue('p13134');
+  const gridExportTotal = getValue('p13125');
+  const gridImportTotal = getValue('p13148');
+  const loadTotal = getValue('p13130');
+  const battChargeTotal = getValue('p13034');
+  const battDischargeTotal = getValue('p13035');
+
+  // Battery metrics
+  const soc = getValue('p13141');
+  const soh = getValue('p13142');
+  const battTemp = getValue('p13143');
+  const battVoltage = getValue('p13138');
+  const battCurrent = getValue('p13139');
+  const battCapacity = getValue('p13140');
+
+  // Grid metrics
+  const gridVoltageA = getValue('p13157');
+  const gridVoltageB = getValue('p13158');
+  const gridVoltageC = getValue('p13159');
+  const gridFrequency = getValue('p13007');
+
+  // PV metrics
+  const mppt1Voltage = getValue('p13001');
+  const mppt1Current = getValue('p13002');
+  const mppt2Voltage = getValue('p13105');
+  const mppt2Current = getValue('p13106');
+
+  return (
+    <div className="stat-cards">
+      {/* Power Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">Power</h3>
+        <div className="stat-grid">
+          <StatCard label="Active Power" value={activePower} unit="W" icon={Activity} color="#eab308" />
+          <StatCard label="Reactive Power" value={reactivePower} unit="var" icon={Activity} color="#8b5cf6" />
+          <StatCard label="DC Power" value={dcPower} unit="W" icon={Sun} color="#eab308" />
+          <StatCard label="Load Power" value={loadPower} unit="W" icon={HomeIcon} color="#a855f7" />
+          <StatCard label="Grid Export" value={gridExport} unit="W" icon={Zap} color="#3b82f6" />
+          <StatCard label="Grid Import" value={gridImport} unit="W" icon={Zap} color="#ef4444" />
+          <StatCard label="Battery Charging" value={battCharge} unit="W" icon={BatteryFull} color="#22c55e" />
+          <StatCard label="Battery Discharging" value={battDischarge} unit="W" icon={BatteryFull} color="#f97316" />
+        </div>
+      </div>
+
+      {/* Energy Today Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">Energy Today</h3>
+        <div className="stat-grid">
+          <StatCard label="Solar Yield" value={pvYieldToday} unit="Wh" icon={Sun} color="#eab308" format="energy" />
+          <StatCard label="Grid Export" value={gridExportToday} unit="Wh" icon={Zap} color="#3b82f6" format="energy" />
+          <StatCard label="Grid Import" value={gridImportToday} unit="Wh" icon={Zap} color="#ef4444" format="energy" />
+          <StatCard label="Load Consumption" value={loadToday} unit="Wh" icon={HomeIcon} color="#a855f7" format="energy" />
+          <StatCard label="Battery Charged" value={battChargeToday} unit="Wh" icon={BatteryFull} color="#22c55e" format="energy" />
+          <StatCard label="Battery Discharged" value={battDischargeToday} unit="Wh" icon={BatteryFull} color="#f97316" format="energy" />
+        </div>
+      </div>
+
+      {/* Energy Total Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">Energy Total</h3>
+        <div className="stat-grid">
+          <StatCard label="Solar Yield" value={pvYieldTotal} unit="Wh" icon={Sun} color="#eab308" format="energy" />
+          <StatCard label="Grid Export" value={gridExportTotal} unit="Wh" icon={Zap} color="#3b82f6" format="energy" />
+          <StatCard label="Grid Import" value={gridImportTotal} unit="Wh" icon={Zap} color="#ef4444" format="energy" />
+          <StatCard label="Load Consumption" value={loadTotal} unit="Wh" icon={HomeIcon} color="#a855f7" format="energy" />
+          <StatCard label="Battery Charged" value={battChargeTotal} unit="Wh" icon={BatteryFull} color="#22c55e" format="energy" />
+          <StatCard label="Battery Discharged" value={battDischargeTotal} unit="Wh" icon={BatteryFull} color="#f97316" format="energy" />
+        </div>
+      </div>
+
+      {/* Battery Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">Battery</h3>
+        <div className="stat-grid">
+          <StatCard label="State of Charge" value={soc} unit="%" icon={BatteryFull} color="#22c55e" format="percent" />
+          <StatCard label="State of Health" value={soh} unit="%" icon={BatteryFull} color="#22c55e" format="percent" />
+          <StatCard label="Temperature" value={battTemp} unit="°C" icon={Thermometer} color="#f97316" />
+          <StatCard label="Voltage" value={battVoltage} unit="V" icon={Gauge} color="#3b82f6" />
+          <StatCard label="Current" value={battCurrent} unit="A" icon={Activity} color="#8b5cf6" />
+          <StatCard label="Capacity" value={battCapacity} unit="Wh" icon={BatteryFull} color="#22c55e" format="energy" />
+        </div>
+      </div>
+
+      {/* Grid Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">Grid</h3>
+        <div className="stat-grid">
+          <StatCard label="Phase A Voltage" value={gridVoltageA} unit="V" icon={Zap} color="#ef4444" />
+          <StatCard label="Phase B Voltage" value={gridVoltageB} unit="V" icon={Zap} color="#eab308" />
+          <StatCard label="Phase C Voltage" value={gridVoltageC} unit="V" icon={Zap} color="#3b82f6" />
+          <StatCard label="Frequency" value={gridFrequency} unit="Hz" icon={Activity} color="#22c55e" />
+        </div>
+      </div>
+
+      {/* PV Strings Section */}
+      <div className="stat-section">
+        <h3 className="stat-section-title">PV Strings</h3>
+        <div className="stat-grid">
+          <StatCard label="MPPT1 Voltage" value={mppt1Voltage} unit="V" icon={CircuitBoard} color="#eab308" />
+          <StatCard label="MPPT1 Current" value={mppt1Current} unit="A" icon={CircuitBoard} color="#eab308" />
+          <StatCard label="MPPT2 Voltage" value={mppt2Voltage} unit="V" icon={CircuitBoard} color="#f97316" />
+          <StatCard label="MPPT2 Current" value={mppt2Current} unit="A" icon={CircuitBoard} color="#f97316" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, unit, icon: Icon, color, format, highlight }) {
+  // Format value based on type
+  let displayValue = '--';
+  let displayUnit = unit;
+
+  if (value !== null && value !== undefined && !isNaN(value)) {
+    if (format === 'energy') {
+      // Convert Wh to kWh or MWh if large
+      if (value >= 1000000) {
+        displayValue = (value / 1000000).toFixed(2);
+        displayUnit = 'MWh';
+      } else if (value >= 1000) {
+        displayValue = (value / 1000).toFixed(2);
+        displayUnit = 'kWh';
+      } else {
+        displayValue = value.toFixed(1);
+      }
+    } else if (format === 'percent') {
+      // Handle percentage - might be 0-1 or 0-100
+      const pctValue = value <= 1 ? value * 100 : value;
+      displayValue = pctValue.toFixed(1);
+    } else if (format === 'currency') {
+      // Currency - show 2 decimal places
+      displayValue = value.toFixed(2);
+    } else {
+      // Power values - convert to kW if large
+      if (Math.abs(value) >= 1000) {
+        displayValue = (value / 1000).toFixed(2);
+        displayUnit = unit === 'W' ? 'kW' : unit === 'var' ? 'kvar' : unit;
+      } else {
+        displayValue = value.toFixed(1);
+      }
+    }
+  }
+
+  const cardStyle = highlight ? {
+    borderColor: `${color}40`,
+    backgroundColor: `${color}15`,
+  } : {};
+
+  const valueStyle = highlight ? { color } : {};
+
+  return (
+    <div className="stat-card" style={cardStyle}>
+      <div className="stat-card-header">
+        <Icon size={16} color={color} />
+        <span className="stat-card-label">{label}</span>
+      </div>
+      <div className="stat-card-value" style={valueStyle}>
+        {displayValue}
+        <span className="stat-card-unit">{displayUnit}</span>
+      </div>
+    </div>
   );
 }
