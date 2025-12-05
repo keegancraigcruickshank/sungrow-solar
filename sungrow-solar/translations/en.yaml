@@ -10,7 +10,7 @@ configuration:
     description: Your iSolarCloud developer app key (from developer portal)
   secret_key:
     name: Secret Key
-    description: Your iSolarCloud secret key / access key (from developer portal)
+    description: Your iSolarCloud secret key (from developer portal)
   host:
     name: API Region
     description: Select your iSolarCloud region
