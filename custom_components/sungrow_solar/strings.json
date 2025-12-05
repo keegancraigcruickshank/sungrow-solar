@@ -1,0 +1,34 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to iSolarCloud",
+        "description": "Enter your iSolarCloud credentials and API keys. You can get the app key and secret key from the iSolarCloud developer portal.",
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "appkey": "App Key",
+          "secret_key": "Secret Key",
+          "host": "API Region",
+          "poll_interval": "Poll Interval (seconds)"
+        },
+        "data_description": {
+          "username": "Your iSolarCloud account email or username",
+          "password": "Your iSolarCloud account password",
+          "appkey": "Developer app key from iSolarCloud portal",
+          "secret_key": "Developer secret key from iSolarCloud portal",
+          "host": "Select the API region closest to you",
+          "poll_interval": "How often to fetch data (60-600 seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to iSolarCloud API",
+      "invalid_auth": "Invalid username, password, or API keys",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  }
+}
